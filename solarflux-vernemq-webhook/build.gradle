@@ -67,8 +67,8 @@ dependencies {
     
     // Testing
     testCompile "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
-	testCompile 'com.spotify:hamcrest-jackson:1.1.0'
-    testCompile 'com.spotify:hamcrest-pojo:1.1.0'
+	testCompile 'com.spotify:hamcrest-jackson:1.1.3'
+    testCompile 'com.spotify:hamcrest-pojo:1.1.3'
 }
 
 sourceCompatibility = 1.8
