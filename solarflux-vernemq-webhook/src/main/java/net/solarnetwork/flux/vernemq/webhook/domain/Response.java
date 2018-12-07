@@ -22,6 +22,8 @@ public class Response {
 
   private final ResponseModifiers modifiers;
 
+  private final ResponseTopics topics;
+
   /**
    * Simple OK response constructor.
    */
@@ -36,7 +38,17 @@ public class Response {
    *        the modifiers
    */
   public Response(ResponseModifiers modifiers) {
-    this(ResponseStatus.OK, null, modifiers);
+    this(ResponseStatus.OK, null, modifiers, null);
+  }
+
+  /**
+   * OK response constructor with topics.
+   * 
+   * @param topics
+   *        the topics
+   */
+  public Response(ResponseTopics topics) {
+    this(ResponseStatus.OK, null, null, topics);
   }
 
   /**
@@ -46,7 +58,7 @@ public class Response {
    *        the status
    */
   public Response(ResponseStatus status) {
-    this(status, null, null);
+    this(status, null, null, null);
   }
 
   /**
@@ -56,7 +68,7 @@ public class Response {
    *        the error message
    */
   public Response(String errorMessage) {
-    this(ResponseStatus.ERROR, errorMessage, null);
+    this(ResponseStatus.ERROR, errorMessage, null, null);
   }
 
   /**
@@ -68,8 +80,11 @@ public class Response {
    *        the message
    * @param modifiers
    *        the modifiers
+   * @param topics
+   *        the topics
    */
-  private Response(ResponseStatus status, String message, ResponseModifiers modifiers) {
+  private Response(ResponseStatus status, String message, ResponseModifiers modifiers,
+      ResponseTopics topics) {
     super();
     this.status = status;
     if (message != null) {
@@ -78,6 +93,7 @@ public class Response {
       this.errorStatus = null;
     }
     this.modifiers = modifiers;
+    this.topics = topics;
   }
 
   @JsonProperty(value = "result")
@@ -98,6 +114,11 @@ public class Response {
   @JsonProperty(value = "modifiers")
   public ResponseModifiers getModifiers() {
     return modifiers;
+  }
+
+  @JsonProperty(value = "topics")
+  public ResponseTopics getTopics() {
+    return topics;
   }
 
 }

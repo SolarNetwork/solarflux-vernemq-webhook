@@ -30,7 +30,7 @@ public class AuthHooksControllerTests extends TestSupport {
     // @formatter:off
     mvc.perform(post("/hook")
           .contentType(MediaType.APPLICATION_JSON_UTF8)
-          .header(HOOK_HEADER, HookType.AuthenticateOnRegister)
+          .header(HOOK_HEADER, HookType.AuthenticateOnRegister.getKey())
           .content(classResourceAsBytes("auth_on_register-01.json"))
           .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())

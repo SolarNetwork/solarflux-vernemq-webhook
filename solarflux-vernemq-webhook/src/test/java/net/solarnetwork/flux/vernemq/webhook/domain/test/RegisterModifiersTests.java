@@ -12,13 +12,12 @@ import static org.junit.Assert.assertThat;
 
 import org.junit.Before;
 import org.junit.Test;
-import org.springframework.http.converter.json.Jackson2ObjectMapperBuilder;
 
-import com.fasterxml.jackson.annotation.JsonInclude.Include;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.RegisterModifiers;
+import net.solarnetwork.flux.vernemq.webhook.test.JsonUtils;
 
 /**
  * Test cases for the {@link RegisterModifiers} class.
@@ -31,8 +30,7 @@ public class RegisterModifiersTests {
 
   @Before
   public void setup() {
-    objectMapper = Jackson2ObjectMapperBuilder.json().serializationInclusion(Include.NON_EMPTY)
-        .build();
+    objectMapper = JsonUtils.defaultObjectMapper();
   }
 
   @Test

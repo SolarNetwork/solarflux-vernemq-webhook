@@ -5,16 +5,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import org.junit.Test;
+import org.junit.runner.RunWith;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.junit4.SpringRunner;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders;
 
-import net.solarnetwork.flux.vernemq.webhook.test.SpringTestSupport;
+import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
+import net.solarnetwork.flux.vernemq.webhook.web.PingController;
 
-@AutoConfigureMockMvc
-public class PingControllerTests extends SpringTestSupport {
+@RunWith(SpringRunner.class)
+@WebMvcTest(PingController.class)
+public class PingControllerTests extends TestSupport {
 
   @Autowired
   private MockMvc mvc;

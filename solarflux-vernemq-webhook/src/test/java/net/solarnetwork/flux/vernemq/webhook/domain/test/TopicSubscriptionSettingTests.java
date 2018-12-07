@@ -1,0 +1,64 @@
+
+package net.solarnetwork.flux.vernemq.webhook.domain.test;
+
+import static com.spotify.hamcrest.jackson.IsJsonStringMatching.isJsonStringMatching;
+import static com.spotify.hamcrest.jackson.JsonMatchers.jsonInt;
+import static com.spotify.hamcrest.jackson.JsonMatchers.jsonObject;
+import static com.spotify.hamcrest.jackson.JsonMatchers.jsonText;
+import static org.hamcrest.Matchers.equalTo;
+import static org.hamcrest.Matchers.is;
+import static org.junit.Assert.assertThat;
+
+import java.io.IOException;
+
+import org.junit.Before;
+import org.junit.Test;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+
+import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
+import net.solarnetwork.flux.vernemq.webhook.domain.TopicSubscriptionSetting;
+import net.solarnetwork.flux.vernemq.webhook.test.JsonUtils;
+import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
+
+/**
+ * Test cases for the {@link TopicSubscriptionSetting} class.
+ * 
+ * @author matt
+ */
+public class TopicSubscriptionSettingTests extends TestSupport {
+
+  private ObjectMapper objectMapper;
+
+  @Before
+  public void setup() {
+    objectMapper = JsonUtils.defaultObjectMapper();
+  }
+
+  @Test
+  public void toJsonFull() throws JsonProcessingException {
+    TopicSubscriptionSetting topic = TopicSubscriptionSetting.builder().withTopic("foo")
+        .withQos(Qos.AtLeastOnce).build();
+    String json = objectMapper.writeValueAsString(topic);
+    log.debug("Topic setting full JSON: {}", json);
+
+    // @formatter:off
+    assertThat(json, isJsonStringMatching(
+        jsonObject()
+          .where("topic", is(jsonText(topic.getTopic())))
+          .where("qos", is(jsonInt(topic.getQos().getKey())))
+        ));
+    // @formatter:on
+  }
+
+  @Test
+  public void fromJson() throws IOException {
+    String json = "{\"topic\":\"foobar\",\"qos\":1}";
+
+    TopicSubscriptionSetting s = objectMapper.readValue(json, TopicSubscriptionSetting.class);
+    assertThat("Topic", s.getTopic(), equalTo("foobar"));
+    assertThat("Qos", s.getQos(), equalTo(Qos.AtLeastOnce));
+  }
+
+}
