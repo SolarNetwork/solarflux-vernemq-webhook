@@ -1,0 +1,42 @@
+# Test application properties.
+
+server:
+  port: 8080
+  address: "0.0.0.0"
+  
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5496/solarnetwork_unittest
+    username: solartest
+    password: solartest
+    platform: postgresql
+    initialize: false
+    tomcat:
+      initialSize: 3
+      maxActive: 15
+      minIdle: 1
+      maxIdle: 2
+      testOnBorrow: true
+      testWhileIdle: true
+      validationQuery: SELECT CURRENT_DATE
+      timeBetweenEvictionRunsMillis: 35000
+      minEvictableIdleTimeMillis: 55000
+      validationInterval: 35000
+      removeAbandoned: true
+      removeAbandonedTimeout: 600
+      jdbcInterceptors: "ConnectionState;StatementCache(prepared=true,callable=false,max=50);ResetAbandonedTimer"
+  jmx:
+    enabled: true
+  mvc:
+    formcontent.putfilter.enabled: false
+  resources.cache-period: 86400
+
+logging:
+  pattern:
+    console: "${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39}: %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
+    file:  "%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
+  level:
+    net.solarnetwork: DEBUG
+    org.springframework.boot.autoconfigure: DEBUG
+
+debugMode: true
