@@ -39,6 +39,26 @@ public class RegisterRequest {
   }
 
   /**
+   * Creates builder to build {@link RegisterRequest}, configured as a copy of another request.
+   * 
+   * @param request
+   *        the request to copy
+   * @return created builder
+   */
+  public static Builder builder(RegisterRequest request) {
+    // @formatter:off
+    return new Builder()
+        .withCleanSession(request.getCleanSession())
+        .withClientId(request.getClientId())
+        .withMountpoint(request.getMountpoint())
+        .withPassword(request.getPassword())
+        .withPeerAddress(request.getPeerAddress())
+        .withPeerPort(request.getPeerPort())
+        .withUsername(request.getUsername());
+    // @formatter:on
+  }
+
+  /**
    * Creates builder to build {@link RegisterRequest}.
    * 
    * @return created builder
