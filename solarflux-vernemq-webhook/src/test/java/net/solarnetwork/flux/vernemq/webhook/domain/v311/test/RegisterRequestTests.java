@@ -1,5 +1,5 @@
 
-package net.solarnetwork.flux.vernemq.webhook.domain.test;
+package net.solarnetwork.flux.vernemq.webhook.domain.v311.test;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
@@ -11,7 +11,7 @@ import org.junit.Test;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import net.solarnetwork.flux.vernemq.webhook.domain.RegisterRequest;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
 import net.solarnetwork.flux.vernemq.webhook.test.JsonUtils;
 import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
 

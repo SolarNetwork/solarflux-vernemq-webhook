@@ -1,5 +1,5 @@
 
-package net.solarnetwork.flux.vernemq.webhook.domain;
+package net.solarnetwork.flux.vernemq.webhook.domain.v311;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;

@@ -1,8 +1,10 @@
 
-package net.solarnetwork.flux.vernemq.webhook.domain;
+package net.solarnetwork.flux.vernemq.webhook.domain.v311;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
 
 /**
  * A subscribe or auth-subscribe request model.

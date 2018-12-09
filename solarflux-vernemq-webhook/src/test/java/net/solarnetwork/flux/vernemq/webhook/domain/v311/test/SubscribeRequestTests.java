@@ -1,5 +1,5 @@
 
-package net.solarnetwork.flux.vernemq.webhook.domain.test;
+package net.solarnetwork.flux.vernemq.webhook.domain.v311.test;
 
 import static com.spotify.hamcrest.pojo.IsPojo.pojo;
 import static org.hamcrest.Matchers.contains;
@@ -14,9 +14,9 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
-import net.solarnetwork.flux.vernemq.webhook.domain.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSubscriptionSetting;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.test.JsonUtils;
 import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
 

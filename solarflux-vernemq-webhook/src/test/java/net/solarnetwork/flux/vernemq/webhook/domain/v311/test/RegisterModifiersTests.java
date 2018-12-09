@@ -1,5 +1,5 @@
 
-package net.solarnetwork.flux.vernemq.webhook.domain.test;
+package net.solarnetwork.flux.vernemq.webhook.domain.v311.test;
 
 import static com.spotify.hamcrest.jackson.IsJsonMissing.jsonMissing;
 import static com.spotify.hamcrest.jackson.JsonMatchers.jsonBoolean;
@@ -16,7 +16,7 @@ import org.junit.Test;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import net.solarnetwork.flux.vernemq.webhook.domain.RegisterModifiers;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterModifiers;
 import net.solarnetwork.flux.vernemq.webhook.test.JsonUtils;
 
 /**

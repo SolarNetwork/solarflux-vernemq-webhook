@@ -1,8 +1,10 @@
 
-package net.solarnetwork.flux.vernemq.webhook.domain;
+package net.solarnetwork.flux.vernemq.webhook.domain.v311;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+
+import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 
 /**
  * A publish or auth-publish request model.
