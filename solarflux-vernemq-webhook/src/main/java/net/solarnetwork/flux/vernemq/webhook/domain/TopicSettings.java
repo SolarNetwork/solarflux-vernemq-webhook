@@ -17,6 +17,9 @@ public class TopicSettings implements ResponseTopics {
 
   /**
    * Constructor.
+   * 
+   * @param settings
+   *        the settings
    */
   @JsonCreator
   public TopicSettings(List<TopicSubscriptionSetting> settings) {
