@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 import net.solarnetwork.web.domain.Response;
 
 /**
- * VerneMQ web hooks for authorization.
+ * VerneMQ web hooks for MQTT v3 authorization.
  * 
  * @author matt
  */
