@@ -17,14 +17,15 @@
 
 package net.solarnetwork.flux.vernemq.webhook.web;
 
-import java.util.LinkedHashMap;
-import java.util.Map;
-
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import net.solarnetwork.web.domain.Response;
+import net.solarnetwork.flux.vernemq.webhook.domain.Response;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
+import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 
 /**
  * VerneMQ web hooks for MQTT v3 authorization.
@@ -35,16 +36,22 @@ import net.solarnetwork.web.domain.Response;
 @RequestMapping(path = "/hook", method = RequestMethod.POST)
 public class AuthHooksController {
 
+  private final AuthService authService;
+
+  @Autowired
+  public AuthHooksController(AuthService authService) {
+    super();
+    this.authService = authService;
+  }
+
   /**
    * Authenticate on register hook.
    * 
    * @return map of properties
    */
   @RequestMapping(value = "", headers = "vernemq-hook=auth_on_register")
-  public Response<Map<String, ?>> authOnRegister() {
-    Map<String, Object> data = new LinkedHashMap<>();
-    data.put("allGood", true);
-    return Response.response(data);
+  public Response authOnRegister(@RequestBody RegisterRequest request) {
+    return authService.authenticateRequest(request);
   }
 
 }
