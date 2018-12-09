@@ -46,6 +46,7 @@ checkstyle {
 
 dependencies {
 	compile "org.springframework.boot:spring-boot-starter:${springBootVersion}"
+	compile "org.springframework.boot:spring-boot-starter-jdbc:${springBootVersion}"
 	compile "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
 
 	// allow WAR to be run from command line OR deployed in Tomcat
@@ -62,6 +63,7 @@ dependencies {
 
 	// SolarNetwork
 	compile 'net.solarnetwork.common:net.solarnetwork.common.web:1.15.0'
+	compile 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.15.0'
 
 	// Utils
     

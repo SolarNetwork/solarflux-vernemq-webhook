@@ -18,6 +18,7 @@
 package net.solarnetwork.flux.vernemq.webhook.test;
 
 import java.io.IOException;
+import java.io.InputStreamReader;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,4 +52,24 @@ public abstract class TestSupport {
     }
   }
 
+  /**
+   * Load a class-path relative resource as a string.
+   * 
+   * @param resourceName
+   *        the resource
+   * @param charsetName
+   *        the charset to use
+   * @return the content
+   * @throws RuntimeException
+   *         if any {@link IOException} occurs
+   */
+  protected String classResourceAsString(String resourceName, String charsetName) {
+    try {
+      return FileCopyUtils.copyToString(
+          new InputStreamReader(getClass().getResourceAsStream(resourceName), charsetName));
+    } catch (IOException e) {
+      throw new RuntimeException("Error loading class " + getClass().getSimpleName() + " resource ["
+          + resourceName + "]: " + e.getMessage(), e);
+    }
+  }
 }
