@@ -35,7 +35,9 @@ import org.springframework.jdbc.core.PreparedStatementCreator;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
 import net.solarnetwork.flux.vernemq.webhook.domain.ResponseStatus;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 
 /**
@@ -148,6 +150,18 @@ public class JdbcAuthService implements AuthService {
 
     // request is authenticated
     return new Response();
+  }
+
+  @Override
+  public Response authorizeRequest(PublishRequest request) {
+    // TODO Auto-generated method stub
+    return null;
+  }
+
+  @Override
+  public Response authorizeRequest(SubscribeRequest request) {
+    // TODO Auto-generated method stub
+    return null;
   }
 
   /**

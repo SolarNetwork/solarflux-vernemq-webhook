@@ -24,7 +24,9 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 
 /**
@@ -52,6 +54,26 @@ public class AuthHooksController {
   @RequestMapping(value = "", headers = "vernemq-hook=auth_on_register")
   public Response authOnRegister(@RequestBody RegisterRequest request) {
     return authService.authenticateRequest(request);
+  }
+
+  /**
+   * Authorize on publish hook.
+   * 
+   * @return map of properties
+   */
+  @RequestMapping(value = "", headers = "vernemq-hook=auth_on_publish")
+  public Response authOnPublish(@RequestBody PublishRequest request) {
+    return authService.authorizeRequest(request);
+  }
+
+  /**
+   * Authorize on subscribe hook.
+   * 
+   * @return map of properties
+   */
+  @RequestMapping(value = "", headers = "vernemq-hook=auth_on_subscribe")
+  public Response authOnSubscribe(@RequestBody SubscribeRequest request) {
+    return authService.authorizeRequest(request);
   }
 
 }

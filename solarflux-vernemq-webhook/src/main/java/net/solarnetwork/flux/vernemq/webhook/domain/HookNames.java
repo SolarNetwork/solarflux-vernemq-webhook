@@ -31,6 +31,8 @@ public interface HookNames {
 
   String AUTH_ON_REGISTER = "auth_on_register";
 
+  String AUTH_ON_PUBLISH = "auth_on_publish";
+
   String AUTH_ON_SUBSCRIBE = "auth_on_subscribe";
 
 }

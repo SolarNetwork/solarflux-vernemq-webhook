@@ -35,7 +35,9 @@ import org.springframework.test.web.servlet.MockMvc;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.HookType;
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
 import net.solarnetwork.flux.vernemq.webhook.web.AuthHooksController;
@@ -66,6 +68,46 @@ public class AuthHooksControllerTests extends TestSupport {
             .contentType(MediaType.APPLICATION_JSON_UTF8)
             .header(HOOK_HEADER, HookType.AuthenticateOnRegister.getKey())
             .content(classResourceAsBytes("auth_on_register-01.json"))
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(content().json(OK_RESPONSE_JSON));
+    // @formatter:on
+  }
+
+  @Test
+  public void authOnPublish() throws Exception {
+    // given
+    Response resp = new Response();
+    given(authService.authorizeRequest(Mockito.any(PublishRequest.class))).willReturn(resp);
+
+    // when
+
+    // @formatter:off
+    mvc.perform(
+        post("/hook")
+            .contentType(MediaType.APPLICATION_JSON_UTF8)
+            .header(HOOK_HEADER, HookType.AuthorizeOnPublish.getKey())
+            .content(classResourceAsBytes("auth_on_publish-01.json"))
+            .accept(MediaType.APPLICATION_JSON))
+        .andExpect(status().isOk())
+        .andExpect(content().json(OK_RESPONSE_JSON));
+    // @formatter:on
+  }
+
+  @Test
+  public void authOnSubscribe() throws Exception {
+    // given
+    Response resp = new Response();
+    given(authService.authorizeRequest(Mockito.any(SubscribeRequest.class))).willReturn(resp);
+
+    // when
+
+    // @formatter:off
+    mvc.perform(
+        post("/hook")
+            .contentType(MediaType.APPLICATION_JSON_UTF8)
+            .header(HOOK_HEADER, HookType.AuthorizeOnSubscribe.getKey())
+            .content(classResourceAsBytes("auth_on_subscribe-01.json"))
             .accept(MediaType.APPLICATION_JSON))
         .andExpect(status().isOk())
         .andExpect(content().json(OK_RESPONSE_JSON));

@@ -18,7 +18,9 @@
 package net.solarnetwork.flux.vernemq.webhook.service;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 
 /**
  * API for webhook authorization.
@@ -35,5 +37,23 @@ public interface AuthService {
    * @return the response
    */
   Response authenticateRequest(RegisterRequest request);
+
+  /**
+   * Authorize a publish request.
+   * 
+   * @param request
+   *        the request to authorize
+   * @return the response
+   */
+  Response authorizeRequest(PublishRequest request);
+
+  /**
+   * Authorize a subscribe request.
+   * 
+   * @param request
+   *        the request to authorize
+   * @return the response
+   */
+  Response authorizeRequest(SubscribeRequest request);
 
 }
