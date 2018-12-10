@@ -79,7 +79,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final String tokenSecret = "foobar";
     DbUtils.createToken(jdbcOps, tokenId, tokenSecret, userId, true,
         DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
-    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis();
+    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
 
     RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
         .withPassword(

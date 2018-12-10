@@ -111,7 +111,7 @@ public class JdbcAuthService implements AuthService {
     }
     final long reqDate;
     try {
-      reqDate = Long.parseLong(pwTokens.get(DATE_PASSWORD_TOKEN));
+      reqDate = Long.parseLong(pwTokens.get(DATE_PASSWORD_TOKEN)) * 1000L;
     } catch (NumberFormatException e) {
       return new Response(
           "Invalid Date component [" + pwTokens.get(DATE_PASSWORD_TOKEN) + "]: " + e.getMessage());

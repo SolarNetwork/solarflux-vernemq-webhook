@@ -11,7 +11,11 @@ server:
   
 spring:
   datasource:
-    jmx-enabled: true
+    url: jdbc:postgresql://localhost:5496/solarnetwork_unittest
+    username: solartest
+    password: solartest
+    platform: postgresql
+    initialize: false
     tomcat:
       initialSize: 3
       maxActive: 15
@@ -26,11 +30,8 @@ spring:
       removeAbandoned: true
       removeAbandonedTimeout: 600
       jdbcInterceptors: "ConnectionState;StatementCache(prepared=true,callable=false,max=50);ResetAbandonedTimer"
-  jmx:
-    enabled: true
-  mvc:
-    formcontent.putfilter.enabled: false
-  resources.cache-period: 86400
+  jackson:
+    default-property-inclusion: non_null
 
 logging:
   pattern:
@@ -46,8 +47,6 @@ spring:
     url: jdbc:postgresql://localhost:5432/solarnetwork
     username: solarnet
     password: solarnet
-    platform: postgresql
-    initialize: false
 
 debugMode: true
 
