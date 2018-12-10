@@ -104,7 +104,7 @@ public class JdbcAuthService implements AuthService {
     if (tokenId == null || tokenId.isEmpty()) {
       return new Response(ResponseStatus.NEXT);
     }
-    final Map<String, String> pwTokens = delimitedStringToMap(request.getPassword(), ";", "=");
+    final Map<String, String> pwTokens = delimitedStringToMap(request.getPassword(), ",", "=");
     if (pwTokens == null || !(pwTokens.containsKey(DATE_PASSWORD_TOKEN)
         && pwTokens.containsKey(SIGNATURE_PASSWORD_TOKEN))) {
       return new Response(ResponseStatus.NEXT);

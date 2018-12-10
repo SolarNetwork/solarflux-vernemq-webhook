@@ -114,7 +114,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   }
 
   private static final String password(long date, String signature) {
-    return String.format("%s=%d;%s=%s", JdbcAuthService.DATE_PASSWORD_TOKEN, date,
+    return String.format("%s=%d,%s=%s", JdbcAuthService.DATE_PASSWORD_TOKEN, date,
         JdbcAuthService.SIGNATURE_PASSWORD_TOKEN, signature);
   }
 
@@ -135,7 +135,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   public void authenticatePasswordRequestDateEmpty() {
     // given
     RegisterRequest req = RegisterRequest.builder().withUsername("token")
-        .withPassword("Date=;Signature=010203").build();
+        .withPassword("Date=,Signature=010203").build();
 
     // when
     Response r = authService.authenticateRequest(req);
@@ -149,7 +149,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   public void authenticatePasswordRequestDateMalformed() {
     // given
     RegisterRequest req = RegisterRequest.builder().withUsername("token")
-        .withPassword("Date=foo;Signature=010203").build();
+        .withPassword("Date=foo,Signature=010203").build();
 
     // when
     Response r = authService.authenticateRequest(req);

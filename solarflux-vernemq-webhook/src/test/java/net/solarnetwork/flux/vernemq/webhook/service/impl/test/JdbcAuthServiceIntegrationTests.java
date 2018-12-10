@@ -66,7 +66,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
   }
 
   private static final String password(long date, String signature) {
-    return String.format("%s=%d;%s=%s", JdbcAuthService.DATE_PASSWORD_TOKEN, date,
+    return String.format("%s=%d,%s=%s", JdbcAuthService.DATE_PASSWORD_TOKEN, date,
         JdbcAuthService.SIGNATURE_PASSWORD_TOKEN, signature);
   }
 

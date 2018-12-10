@@ -4,7 +4,7 @@
 # or application-X.yml where X is the name of the active profile provided via
 # the JVM argument -Dspring.profiles.active=X
 
-# Default profile
+# Default profile (tests)
 server:
   port: 8080
   address: "0.0.0.0"
@@ -37,14 +37,16 @@ logging:
   pattern:
     console: "${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39}: %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
     file:  "%d{yyyy-MM-dd HH:mm:ss.SSS} ${LOG_LEVEL_PATTERN:%5p} %-40.40logger{39} : %m%n${LOG_EXCEPTION_CONVERSION_WORD:%wEx}"
+  level:
+    net.solarnetwork: DEBUG
 
-debugMode: false
+debugMode: true
 
 ---
 spring:
   profiles: development
   datasource:
-    url: jdbc:postgresql://localhost:5432/solarnetwork
+    url: jdbc:postgresql://localhost:5496/solarnetwork
     username: solarnet
     password: solarnet
 
@@ -53,4 +55,3 @@ debugMode: true
 logging:
   level:
     net.solarnetwork: DEBUG
-    org.springframework.boot.autoconfigure: DEBUG
