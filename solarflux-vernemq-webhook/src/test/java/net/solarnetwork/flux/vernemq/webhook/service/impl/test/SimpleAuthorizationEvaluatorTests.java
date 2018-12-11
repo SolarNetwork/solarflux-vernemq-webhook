@@ -226,6 +226,38 @@ public class SimpleAuthorizationEvaluatorTests {
   }
 
   @Test
+  public void subscribeWithPolicyWithSourceWildCharAllowed() {
+    SecurityPolicy policy = policyForSources("/fo?");
+    ActorDetails actor = actor(policy, 2L, 3L);
+    TopicSettings request = requestForTopics("node/2/datum/foo/0");
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic allowed with source restriction", result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/0"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)));
+    // @formatter:on
+  }
+
+  @Test
+  public void subscribeWithPolicyWithSourceWildCharDenied() {
+    SecurityPolicy policy = policyForSources("/fo?");
+    ActorDetails actor = actor(policy, 2L, 3L);
+    TopicSettings request = requestForTopics("node/2/datum/boo/0");
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic deinied via source restriction", result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/boo/0"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)));
+    // @formatter:on
+  }
+
+  @Test
   public void subscribeWithPolicyWithMultilevelSourceAllowed() {
     SecurityPolicy policy = policyForSources("/foo/bar/bam");
     ActorDetails actor = actor(policy, 2L, 3L);
