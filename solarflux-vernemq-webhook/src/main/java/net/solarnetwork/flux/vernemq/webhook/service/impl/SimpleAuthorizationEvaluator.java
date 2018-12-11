@@ -25,12 +25,16 @@ import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import org.springframework.util.AntPathMatcher;
+import org.springframework.util.PathMatcher;
+
 import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
 import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSubscriptionSetting;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
+import net.solarnetwork.util.StringUtils;
 
 /**
  * Basic implementation of {@link AuthorizationEvaluator}.
@@ -43,16 +47,30 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
   /**
    * The default value for the {@code nodeDatumTopicTemplate} property.
    */
-  public static final String DEFAULT_NODE_DATUM_TOPIC_TEMPLATE = "/node/%s/datum/%s/%s";
+  public static final String DEFAULT_NODE_DATUM_TOPIC_TEMPLATE = "node/%s/datum/%s/%s";
 
   /**
    * The default value for the {@code nodeDatumTopicRegex} property.
    */
   // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
-  public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "/node/(\\d+|\\+)/datum(/.*)?/([^/]+)";
+  public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "node/(\\d+|\\+)/datum(/.*)?/([^/]+)";
 
   private String nodeDatumTopicTemplate = DEFAULT_NODE_DATUM_TOPIC_TEMPLATE;
   private Pattern nodeDatumTopicRegex = Pattern.compile(DEFAULT_NODE_DATUM_TOPIC_REGEX);
+
+  /**
+   * Constructor.
+   */
+  public SimpleAuthorizationEvaluator() {
+    super();
+  }
+
+  private PathMatcher createPathMatcher() {
+    AntPathMatcher matcher = new AntPathMatcher();
+    matcher.setCachePatterns(true);
+    matcher.setCaseSensitive(true);
+    return matcher;
+  }
 
   @Override
   public TopicSettings evaluateSubscribe(Actor actor, TopicSettings topics) {
@@ -122,10 +140,26 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
   }
 
   private boolean topicSourceAllowed(Actor actor, String topic, String topicSource) {
-    Set<String> restrictedSourceIds = (actor.getPolicy() != null ? actor.getPolicy().getSourceIds()
+    Set<String> policySources = (actor.getPolicy() != null ? actor.getPolicy().getSourceIds()
         : null);
-    // TODO
-    return true;
+    if (policySources == null || policySources.isEmpty()) {
+      return true;
+    }
+    // to make source wildcard step * NOT match MQTT wildcard path, insert path for all #
+    String topicSourceToMatch = topicSource.replaceAll("#", "#/#");
+    PathMatcher pathMatcher = createPathMatcher();
+    for (String policySource : policySources) {
+      if (pathMatcher.isPattern(policySource)) {
+        if (pathMatcher.match(policySource, topicSourceToMatch)) {
+          return true;
+        }
+      } else if (policySource.equals(topicSource)) {
+        return true;
+      }
+    }
+    AUDIT_LOG.info("Topic [{}] access denied to {}: source policy restrictions: {}", topic, actor,
+        StringUtils.commaDelimitedStringFromCollection(policySources));
+    return false;
   }
 
   private boolean topicAggregationAllowed(Actor actor, String topic, String topicAgg) {
@@ -173,11 +207,42 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
     this.nodeDatumTopicTemplate = nodeDatumTopicTemplate;
   }
 
+  /**
+   * Get the node datum topic regular expression.
+   * 
+   * @return the regular expression
+   */
   public Pattern getNodeDatumTopicRegex() {
     return nodeDatumTopicRegex;
   }
 
+  /**
+   * Set the node datum topic regular expression.
+   * 
+   * <p>
+   * This expression is matched against the topic requests, and must provide the following matching
+   * groups:
+   * </p>
+   * 
+   * <ol>
+   * <li>node ID</li>
+   * <li>source ID</li>
+   * <li>aggregation</li>
+   * </ol>
+   * 
+   * <p>
+   * Each group should be treated as a string, to accommodate topic wild cards.
+   * </p>
+   * 
+   * @param nodeDatumTopicRegex
+   *        the regular expression to use
+   * @throws IllegalArgumentException
+   *         if {@code nodeDatumTopicRegex} is {@literal null}
+   */
   public void setNodeDatumTopicRegex(Pattern nodeDatumTopicRegex) {
+    if (nodeDatumTopicRegex == null) {
+      throw new IllegalArgumentException("nodeDatumTopicRegex must not be null");
+    }
     this.nodeDatumTopicRegex = nodeDatumTopicRegex;
   }
 
