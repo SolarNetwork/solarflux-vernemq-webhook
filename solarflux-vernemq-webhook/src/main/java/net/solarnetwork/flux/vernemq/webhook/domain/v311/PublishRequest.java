@@ -20,6 +20,7 @@ package net.solarnetwork.flux.vernemq.webhook.domain.v311;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 
 /**
@@ -28,7 +29,7 @@ import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
  * @author matt
  */
 @JsonDeserialize(builder = PublishRequest.Builder.class)
-public class PublishRequest {
+public class PublishRequest implements Message {
 
   @JsonProperty("client_id")
   private final String clientId;
@@ -159,18 +160,22 @@ public class PublishRequest {
     return username;
   }
 
+  @Override
   public Qos getQos() {
     return qos;
   }
 
+  @Override
   public String getTopic() {
     return topic;
   }
 
+  @Override
   public byte[] getPayload() {
     return payload;
   }
 
+  @Override
   public Boolean getRetain() {
     return retain;
   }

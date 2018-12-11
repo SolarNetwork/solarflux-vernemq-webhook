@@ -15,30 +15,40 @@
  * ========================================================================
  */
 
-package net.solarnetwork.flux.vernemq.webhook.domain;
+package net.solarnetwork.flux.vernemq.webhook.domain.v311;
 
-import com.fasterxml.jackson.annotation.JsonPropertyOrder;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import net.solarnetwork.flux.vernemq.webhook.domain.Message;
+import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
+import net.solarnetwork.flux.vernemq.webhook.domain.ResponseModifiers;
+
 /**
- * A topic subscription setting.
+ * Publish response modifiers.
  * 
  * @author matt
+ * @version 1.0
  */
-@JsonPropertyOrder({ "topic", "qos" })
-@JsonDeserialize(builder = TopicSubscriptionSetting.Builder.class)
-public class TopicSubscriptionSetting {
+@JsonDeserialize(builder = PublishModifiers.Builder.class)
+public class PublishModifiers implements ResponseModifiers, Message {
 
   private final String topic;
+
   private final Qos qos;
 
-  private TopicSubscriptionSetting(Builder builder) {
+  private final byte[] payload;
+
+  private final Boolean retain;
+
+  private PublishModifiers(Builder builder) {
     this.topic = builder.topic;
     this.qos = builder.qos;
+    this.payload = builder.payload;
+    this.retain = builder.retain;
   }
 
   /**
-   * Creates builder to build {@link TopicSubscriptionSetting}.
+   * Creates builder to build {@link PublishModifiers}.
    * 
    * @return created builder
    */
@@ -47,12 +57,14 @@ public class TopicSubscriptionSetting {
   }
 
   /**
-   * Builder to build {@link TopicSubscriptionSetting}.
+   * Builder to build {@link PublishModifiers}.
    */
   public static final class Builder {
 
     private String topic;
     private Qos qos;
+    private byte[] payload;
+    private Boolean retain;
 
     private Builder() {
     }
@@ -67,51 +79,39 @@ public class TopicSubscriptionSetting {
       return this;
     }
 
-    public TopicSubscriptionSetting build() {
-      return new TopicSubscriptionSetting(this);
+    public Builder withPayload(byte[] payload) {
+      this.payload = payload;
+      return this;
+    }
+
+    public Builder withRetain(Boolean retain) {
+      this.retain = retain;
+      return this;
+    }
+
+    public PublishModifiers build() {
+      return new PublishModifiers(this);
     }
   }
 
   @Override
-  public int hashCode() {
-    final int prime = 31;
-    int result = 1;
-    result = prime * result + ((qos == null) ? 0 : qos.hashCode());
-    result = prime * result + ((topic == null) ? 0 : topic.hashCode());
-    return result;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (getClass() != obj.getClass()) {
-      return false;
-    }
-    TopicSubscriptionSetting other = (TopicSubscriptionSetting) obj;
-    if (qos != other.qos) {
-      return false;
-    }
-    if (topic == null) {
-      if (other.topic != null) {
-        return false;
-      }
-    } else if (!topic.equals(other.topic)) {
-      return false;
-    }
-    return true;
-  }
-
   public String getTopic() {
     return topic;
   }
 
+  @Override
   public Qos getQos() {
     return qos;
+  }
+
+  @Override
+  public byte[] getPayload() {
+    return payload;
+  }
+
+  @Override
+  public Boolean getRetain() {
+    return retain;
   }
 
 }
