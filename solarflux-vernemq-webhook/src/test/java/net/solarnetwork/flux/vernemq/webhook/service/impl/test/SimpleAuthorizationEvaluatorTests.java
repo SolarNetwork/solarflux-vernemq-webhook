@@ -21,9 +21,11 @@ import static com.spotify.hamcrest.pojo.IsPojo.pojo;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
 import static org.hamcrest.Matchers.allOf;
+import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.notNullValue;
+import static org.hamcrest.Matchers.nullValue;
 import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
@@ -34,12 +36,15 @@ import java.util.UUID;
 import org.junit.Before;
 import org.junit.Test;
 
+import net.solarnetwork.central.domain.Aggregation;
 import net.solarnetwork.central.security.BasicSecurityPolicy;
 import net.solarnetwork.central.security.SecurityPolicy;
 import net.solarnetwork.flux.vernemq.webhook.domain.ActorDetails;
+import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSubscriptionSetting;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.SimpleAuthorizationEvaluator;
 
 /**
@@ -62,17 +67,25 @@ public class SimpleAuthorizationEvaluatorTests {
         .build();
   }
 
+  private SecurityPolicy policyForMinAggregation(Aggregation agg) {
+    return new BasicSecurityPolicy.Builder().withMinAggregation(agg).build();
+  }
+
   private SecurityPolicy policyForSources(String... sources) {
     return new BasicSecurityPolicy.Builder().withSourceIds(Arrays.stream(sources).collect(toSet()))
         .build();
   }
 
   private ActorDetails actor(SecurityPolicy policy, Long... nodes) {
+    return actor(policy, false, nodes);
+  }
+
+  private ActorDetails actor(SecurityPolicy policy, boolean publishAllowed, Long... nodes) {
     Set<Long> nodeIds = null;
     if (nodes != null) {
       nodeIds = Arrays.stream(nodes).collect(toSet());
     }
-    return new ActorDetails(UUID.randomUUID().toString(), false, 1L, policy, nodeIds);
+    return new ActorDetails(UUID.randomUUID().toString(), publishAllowed, 1L, policy, nodeIds);
   }
 
   private TopicSettings requestForTopics(String... topics) {
@@ -80,6 +93,10 @@ public class SimpleAuthorizationEvaluatorTests {
         .map(s -> TopicSubscriptionSetting.builder().withTopic(s).withQos(Qos.AtLeastOnce).build())
         .collect(toList());
     return new TopicSettings(settings);
+  }
+
+  private Message requestMessage(String topic) {
+    return PublishRequest.builder().withTopic(topic).build();
   }
 
   @Test
@@ -695,4 +712,151 @@ public class SimpleAuthorizationEvaluatorTests {
     // @formatter:on
   }
 
+  @SuppressWarnings("unchecked")
+  @Test
+  public void subscribeWithPolicyMinAggregationNone() {
+    SecurityPolicy policy = policyForMinAggregation(Aggregation.None);
+    ActorDetails actor = actor(policy, 2L);
+    TopicSettings request = requestForTopics("node/2/datum/foo/0", "node/2/datum/foo/h",
+        "node/2/datum/foo/d", "node/2/datum/foo/M");
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(4)));
+    // @formatter:off
+    assertThat("Topic allowed via policy restriction", result.getSettings(), contains(
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/0"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/h"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/d"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/M"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce))
+    ));
+    // @formatter:on
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void subscribeWithPolicyMinAggregationHour() {
+    SecurityPolicy policy = policyForMinAggregation(Aggregation.Hour);
+    ActorDetails actor = actor(policy, 2L);
+    TopicSettings request = requestForTopics("node/2/datum/foo/0", "node/2/datum/foo/h",
+        "node/2/datum/foo/d", "node/2/datum/foo/M");
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(4)));
+    // @formatter:off
+    assertThat("Topic allowed via policy restriction", result.getSettings(), contains(
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/0"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/h"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/d"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/M"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce))
+    ));
+    // @formatter:on
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void subscribeWithPolicyMinAggregationDay() {
+    SecurityPolicy policy = policyForMinAggregation(Aggregation.Day);
+    ActorDetails actor = actor(policy, 2L);
+    TopicSettings request = requestForTopics("node/2/datum/foo/0", "node/2/datum/foo/h",
+        "node/2/datum/foo/d", "node/2/datum/foo/M");
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(4)));
+    // @formatter:off
+    assertThat("Topic allowed via policy restriction", result.getSettings(), contains(
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/0"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/h"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/d"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/M"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce))
+    ));
+    // @formatter:on
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void subscribeWithPolicyMinAggregationMonth() {
+    SecurityPolicy policy = policyForMinAggregation(Aggregation.Month);
+    ActorDetails actor = actor(policy, 2L);
+    TopicSettings request = requestForTopics("node/2/datum/foo/0", "node/2/datum/foo/h",
+        "node/2/datum/foo/d", "node/2/datum/foo/M");
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(4)));
+    // @formatter:off
+    assertThat("Topic allowed via policy restriction", result.getSettings(), contains(
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/0"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/h"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/d"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/M"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce))
+    ));
+    // @formatter:on
+  }
+
+  @SuppressWarnings("unchecked")
+  @Test
+  public void subscribeWithPolicyMinAggregationYear() {
+    SecurityPolicy policy = policyForMinAggregation(Aggregation.Year);
+    ActorDetails actor = actor(policy, 2L);
+    TopicSettings request = requestForTopics("node/2/datum/foo/0", "node/2/datum/foo/h",
+        "node/2/datum/foo/d", "node/2/datum/foo/M");
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(4)));
+    // @formatter:off
+    assertThat("Topic allowed via policy restriction", result.getSettings(), contains(
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/0"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/h"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/d"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/foo/M"))
+            .withProperty("qos", equalTo(Qos.NotAllowed))
+    ));
+    // @formatter:on
+  }
+
+  @Test
+  public void publishNoPolicyActorNotAllowed() {
+    ActorDetails actor = actor(null, false, 2L);
+    Message request = requestMessage("node/2/datum/foo/0");
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result not available", result, nullValue());
+  }
 }

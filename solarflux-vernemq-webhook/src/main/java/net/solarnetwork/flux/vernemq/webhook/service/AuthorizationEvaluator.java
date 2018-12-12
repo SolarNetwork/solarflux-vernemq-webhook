@@ -36,7 +36,8 @@ public interface AuthorizationEvaluator {
    *        the authenticated actor
    * @param topics
    *        the topics to subscribe to
-   * @return the resulting topics to subscribe to
+   * @return the resulting topics to subscribe to, or {@literal null} if subscribing is not
+   *         authorized for any reason
    */
   TopicSettings evaluateSubscribe(Actor actor, TopicSettings topics);
 
@@ -47,7 +48,8 @@ public interface AuthorizationEvaluator {
    *        the authenticated actor
    * @param message
    *        the message to publish
-   * @return the resulting message to publish
+   * @return the resulting message to publish; or {@literal null} if publishing is not authorized
+   *         for any reason
    */
   Message evaluatePublish(Actor actor, Message message);
 

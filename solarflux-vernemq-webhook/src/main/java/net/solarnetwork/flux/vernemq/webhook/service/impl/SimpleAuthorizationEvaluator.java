@@ -28,6 +28,7 @@ import java.util.regex.Pattern;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.util.PathMatcher;
 
+import net.solarnetwork.central.domain.Aggregation;
 import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
 import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
@@ -39,15 +40,22 @@ import net.solarnetwork.util.StringUtils;
 /**
  * Basic implementation of {@link AuthorizationEvaluator}.
  * 
+ * <p>
+ * This service works with topics adhering to the following syntax:
+ * </p>
+ * 
+ * <pre>
+ * <code>node/{nodeId}/datum/{sourceId}/{aggregation}</code>
+ * </pre>
+ * 
+ * <p>
+ * 
+ * </p>
+ * 
  * @author matt
  * @version 1.0
  */
 public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
-
-  /**
-   * The default value for the {@code nodeDatumTopicTemplate} property.
-   */
-  public static final String DEFAULT_NODE_DATUM_TOPIC_TEMPLATE = "node/%s/datum/%s/%s";
 
   /**
    * The default value for the {@code nodeDatumTopicRegex} property.
@@ -55,21 +63,21 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
   // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
   public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "node/(\\d+|\\+)/datum(/.*)?/([^/]+)";
 
-  private String nodeDatumTopicTemplate = DEFAULT_NODE_DATUM_TOPIC_TEMPLATE;
   private Pattern nodeDatumTopicRegex = Pattern.compile(DEFAULT_NODE_DATUM_TOPIC_REGEX);
 
-  /**
-   * Constructor.
-   */
-  public SimpleAuthorizationEvaluator() {
-    super();
-  }
-
-  private PathMatcher createPathMatcher() {
-    AntPathMatcher matcher = new AntPathMatcher();
-    matcher.setCachePatterns(true);
-    matcher.setCaseSensitive(true);
-    return matcher;
+  @Override
+  public Message evaluatePublish(Actor actor, Message message) {
+    if (actor == null || message == null || message.getTopic() == null
+        || message.getTopic().isEmpty()) {
+      return message;
+    }
+    String topic = message.getTopic();
+    if (!actor.isPublishAllowed()) {
+      AUDIT_LOG.info("Topic [{}] access denied to {}: publish not allowed", topic, actor);
+      return null;
+    }
+    // TODO: publish support
+    return null;
   }
 
   @Override
@@ -92,9 +100,9 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
         String topicNode = m.group(1);
         String topicSource = m.group(2);
         String topicAgg = m.group(3);
-        if (!topicNodeAllowed(actor, topic, topicNode)
-            || !topicSourceAllowed(actor, topic, topicSource)
-            || !topicAggregationAllowed(actor, topic, topicAgg)) {
+        if (!(topicNodeAllowed(actor, topic, topicNode)
+            && topicSourceAllowed(actor, topic, topicSource)
+            && topicAggregationAllowed(actor, topic, topicAgg))) {
           qos = Qos.NotAllowed;
         }
       }
@@ -111,6 +119,13 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
     }
 
     return (haveChange ? new TopicSettings(res) : topics);
+  }
+
+  private PathMatcher createPathMatcher() {
+    AntPathMatcher matcher = new AntPathMatcher();
+    matcher.setCachePatterns(true);
+    matcher.setCaseSensitive(true);
+    return matcher;
   }
 
   private boolean topicNodeAllowed(Actor actor, String topic, String topicNode) {
@@ -163,48 +178,26 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
   }
 
   private boolean topicAggregationAllowed(Actor actor, String topic, String topicAgg) {
-    // TODO Auto-generated method stub
-    return true;
-  }
-
-  @Override
-  public Message evaluatePublish(Actor actor, Message message) {
-    // TODO Auto-generated method stub
-    return message;
-  }
-
-  /**
-   * Get the node datum topic template.
-   * 
-   * @return the node datum topic template; defaults to {@link #DEFAULT_NODE_DATUM_TOPIC_TEMPLATE}
-   */
-  public String getNodeDatumTopicTemplate() {
-    return nodeDatumTopicTemplate;
-  }
-
-  /**
-   * Set the node datum topic template.
-   * 
-   * <p>
-   * This template takes the following parameters:
-   * </p>
-   * 
-   * <ol>
-   * <li>node ID</li>
-   * <li>source ID</li>
-   * <li>aggregation</li>
-   * </ol>
-   * 
-   * @param nodeDatumTopicTemplate
-   *        the template to use
-   * @throws IllegalArgumentException
-   *         if {@code nodeDatumTopicTemplate} is {@literal null}
-   */
-  public void setNodeDatumTopicTemplate(String nodeDatumTopicTemplate) {
-    if (nodeDatumTopicTemplate == null) {
-      throw new IllegalArgumentException("nodeDatumTopicTemplate must not be null");
+    Set<Aggregation> policyAggregations = (actor.getPolicy() != null
+        ? actor.getPolicy().getAggregations()
+        : null);
+    if (policyAggregations == null || policyAggregations.isEmpty()) {
+      return true;
     }
-    this.nodeDatumTopicTemplate = nodeDatumTopicTemplate;
+    Aggregation agg;
+    try {
+      agg = Aggregation.forKey(topicAgg);
+    } catch (IllegalArgumentException e) {
+      AUDIT_LOG.info("Topic [{}] access denied to {}: invalid aggregation [{}]", topic, actor,
+          topicAgg);
+      return false;
+    }
+    if (!policyAggregations.contains(agg)) {
+      AUDIT_LOG.info("Topic [{}] access denied to {}: aggregation policy restrictions: {}", topic,
+          actor, StringUtils.commaDelimitedStringFromCollection(policyAggregations));
+      return false;
+    }
+    return true;
   }
 
   /**
