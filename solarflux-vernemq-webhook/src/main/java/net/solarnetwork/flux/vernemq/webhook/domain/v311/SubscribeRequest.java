@@ -114,6 +114,11 @@ public class SubscribeRequest {
     }
   }
 
+  @Override
+  public String toString() {
+    return "SubscribeRequest{" + username + ", " + (topics != null ? topics : "-") + "}";
+  }
+
   public String getClientId() {
     return clientId;
   }

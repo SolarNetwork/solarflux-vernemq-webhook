@@ -30,6 +30,7 @@ import org.springframework.jdbc.core.JdbcOperations;
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
 import net.solarnetwork.flux.vernemq.webhook.domain.ResponseStatus;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
+import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
 import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
 
@@ -45,11 +46,14 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Mock
   private JdbcOperations jdbcOps;
 
+  @Mock
+  private AuthorizationEvaluator authorizationEvaluator;
+
   private JdbcAuthService authService;
 
   @Before
   public void setup() {
-    authService = new JdbcAuthService(jdbcOps);
+    authService = new JdbcAuthService(jdbcOps, authorizationEvaluator);
   }
 
   @Test

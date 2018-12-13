@@ -33,12 +33,17 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 
+import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
+import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
 import net.solarnetwork.flux.vernemq.webhook.domain.ResponseStatus;
+import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishModifiers;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
+import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
 
 /**
  * {@link AuthService} implementation that uses JDBC to authenticate and authorize requests.
@@ -80,12 +85,20 @@ public class JdbcAuthService implements AuthService {
    * The default value for the {@code jdbcCall} property.
    */
   // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
-  public static final String DEFAULT_AUTHENTICATE_CALL = "SELECT * FROM solaruser.snws2_find_verified_token_details(?,?,?,?,?)";
+  public static final String DEFAULT_AUTHENTICATE_CALL = "SELECT user_id,token_type,jpolicy FROM solaruser.snws2_find_verified_token_details(?,?,?,?,?)";
+
+  /**
+   * The default value for the {@code jdbcCall} property.
+   */
+  // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
+  public static final String DEFAULT_AUTHORIZE_CALL = "SELECT user_id,token_type,jpolicy,node_ids FROM solaruser.user_auth_token_node_ids WHERE auth_token = ?";
 
   private static final Logger log = LoggerFactory.getLogger(JdbcAuthService.class);
 
   private final JdbcOperations jdbcOps;
+  private final AuthorizationEvaluator authEvaluator;
   private String authenticateCall = DEFAULT_AUTHENTICATE_CALL;
+  private String authorizeCall = DEFAULT_AUTHORIZE_CALL;
   private String snHost = DEFAULT_SN_HOST;
   private String snPath = DEFAULT_SN_PATH;
 
@@ -94,10 +107,13 @@ public class JdbcAuthService implements AuthService {
    * 
    * @param jdbcOps
    *        the JDBC API
+   * @param authEvaluator
+   *        the authorization evaluator to use
    */
-  public JdbcAuthService(JdbcOperations jdbcOps) {
+  public JdbcAuthService(JdbcOperations jdbcOps, AuthorizationEvaluator authEvaluator) {
     super();
     this.jdbcOps = jdbcOps;
+    this.authEvaluator = authEvaluator;
   }
 
   @Override
@@ -122,6 +138,7 @@ public class JdbcAuthService implements AuthService {
     if (sig.isEmpty()) {
       return new Response(ResponseStatus.NEXT);
     }
+
     log.debug("Authenticating [{}] @ {}{} with [{}]", tokenId, snHost, snPath,
         request.getPassword());
     List<SnTokenDetails> results = jdbcOps.query(new PreparedStatementCreator() {
@@ -138,6 +155,7 @@ public class JdbcAuthService implements AuthService {
         return stmt;
       }
     }, new SnTokenDetailsRowMapper(tokenId));
+
     if (results == null || results.isEmpty()) {
       return new Response(ResponseStatus.NEXT);
     }
@@ -152,16 +170,83 @@ public class JdbcAuthService implements AuthService {
     return new Response();
   }
 
+  private Actor actorForTokenId(String tokenId) {
+    List<Actor> results = jdbcOps.query(new PreparedStatementCreator() {
+
+      @Override
+      public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+        PreparedStatement stmt = con.prepareStatement(authorizeCall, ResultSet.TYPE_FORWARD_ONLY,
+            ResultSet.CONCUR_READ_ONLY);
+        stmt.setString(1, tokenId);
+        return stmt;
+      }
+    }, new ActorDetailsRowMapper(tokenId));
+
+    return (results != null && !results.isEmpty() ? results.get(0) : null);
+  }
+
   @Override
   public Response authorizeRequest(PublishRequest request) {
-    // TODO Auto-generated method stub
-    return null;
+    final String tokenId = request.getUsername();
+    if (tokenId == null || tokenId.isEmpty()) {
+      return new Response(ResponseStatus.NEXT);
+    }
+
+    log.debug("Authorizing publish request [{}]", request);
+    Actor actor = actorForTokenId(tokenId);
+    if (actor == null) {
+      return new Response(ResponseStatus.NEXT);
+    }
+
+    // verify not expired
+    if (actor.getPolicy() != null && !actor.getPolicy().isValidAt(currentTimeMillis())) {
+      return new Response(ResponseStatus.NEXT);
+    }
+
+    Message result = authEvaluator.evaluatePublish(actor, request);
+    if (result == null) {
+      return new Response(ResponseStatus.NEXT);
+    } else if (result == request) {
+      return new Response();
+    }
+
+    // @formatter:off
+    PublishModifiers mods = PublishModifiers.builder()
+        .withTopic(result.getTopic())
+        .withQos(result.getQos())
+        .withPayload(result.getPayload())
+        .withRetain(result.getRetain())
+        .build();
+    // @formatter:on
+    return new Response(mods);
   }
 
   @Override
   public Response authorizeRequest(SubscribeRequest request) {
-    // TODO Auto-generated method stub
-    return null;
+    final String tokenId = request.getUsername();
+    if (tokenId == null || tokenId.isEmpty()) {
+      return new Response(ResponseStatus.NEXT);
+    }
+
+    log.debug("Authorizing publish request [{}]", request);
+    Actor actor = actorForTokenId(tokenId);
+    if (actor == null) {
+      return new Response(ResponseStatus.NEXT);
+    }
+
+    // verify not expired
+    if (actor.getPolicy() != null && !actor.getPolicy().isValidAt(currentTimeMillis())) {
+      return new Response(ResponseStatus.NEXT);
+    }
+
+    TopicSettings result = authEvaluator.evaluateSubscribe(actor, request.getTopics());
+    if (result == null) {
+      return new Response(ResponseStatus.NEXT);
+    } else if (result == request.getTopics()) {
+      return new Response();
+    }
+
+    return new Response(result);
   }
 
   /**
@@ -215,6 +300,47 @@ public class JdbcAuthService implements AuthService {
       throw new IllegalArgumentException("snHost must not be null");
     }
     this.authenticateCall = jdbcCall;
+  }
+
+  /**
+   * Set the authorization JDBC call to use.
+   * 
+   * <p>
+   * This JDBC statement is used to authorize publish/subscribe requests. This JDBC statement is
+   * expected to take the following parameters:
+   * </p>
+   * 
+   * <ol>
+   * <li><b>token_id</b> ({@code String}) - the SolarNetwork security token ID</li>
+   * </ol>
+   * 
+   * <p>
+   * A result set with the following columns is expected to be returned:
+   * </p>
+   * 
+   * <ol>
+   * <li><b>user_id</b> ({@code Long}) - the SolarNetwork user ID that owns the token</li>
+   * <li><b>token_type</b> ({@code String}) - the SolarNetwork token type, e.g.
+   * {@literal ReadNodeData}</li>
+   * <li><b>jpolicy</b> ({@code String}) - the SolarNetwork security policy associated with the
+   * token</li>
+   * <li><b>node_ids</b> ({@code Long[]}) - an array of SolarNode IDs valid for this actor</li>
+   * </ol>
+   * 
+   * <p>
+   * If no token is available for {@code token_id}, an empty result set is expected.
+   * </p>
+   * 
+   * @param jdbcCall
+   *        the JDBC call
+   * @throws IllegalArgumentException
+   *         if {@code jdbcCall} is {@literal null}
+   */
+  public void setAuthorizeCall(String jdbcCall) {
+    if (jdbcCall == null) {
+      throw new IllegalArgumentException("snHost must not be null");
+    }
+    this.authorizeCall = jdbcCall;
   }
 
   /**

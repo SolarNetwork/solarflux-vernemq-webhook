@@ -148,6 +148,11 @@ public class PublishRequest implements Message {
     }
   }
 
+  @Override
+  public String toString() {
+    return "PublishRequest{" + username + ", " + topic + "@" + qos + "}";
+  }
+
   public String getClientId() {
     return clientId;
   }

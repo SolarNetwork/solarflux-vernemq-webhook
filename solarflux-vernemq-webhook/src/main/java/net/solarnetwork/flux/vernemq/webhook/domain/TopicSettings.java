@@ -22,6 +22,8 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import net.solarnetwork.util.StringUtils;
+
 /**
  * A list of topic subscription settings.
  * 
@@ -46,6 +48,12 @@ public class TopicSettings implements ResponseTopics {
   @JsonValue
   public List<TopicSubscriptionSetting> getSettings() {
     return settings;
+  }
+
+  @Override
+  public String toString() {
+    return (settings != null ? StringUtils.commaDelimitedStringFromCollection(settings)
+        : "<<empty>>");
   }
 
 }

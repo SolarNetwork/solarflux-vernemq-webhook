@@ -39,6 +39,7 @@ import net.solarnetwork.flux.vernemq.webhook.domain.Response;
 import net.solarnetwork.flux.vernemq.webhook.domain.ResponseStatus;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
+import net.solarnetwork.flux.vernemq.webhook.service.impl.SimpleAuthorizationEvaluator;
 import net.solarnetwork.flux.vernemq.webhook.test.DbUtils;
 import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
 
@@ -62,7 +63,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
   @Before
   public void setup() {
     jdbcOps = new JdbcTemplate(dataSource);
-    authService = new JdbcAuthService(jdbcOps);
+    authService = new JdbcAuthService(jdbcOps, new SimpleAuthorizationEvaluator());
   }
 
   private static final String password(long date, String signature) {

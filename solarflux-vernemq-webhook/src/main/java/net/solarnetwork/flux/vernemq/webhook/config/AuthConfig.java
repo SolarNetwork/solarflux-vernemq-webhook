@@ -17,51 +17,29 @@
 
 package net.solarnetwork.flux.vernemq.webhook.config;
 
-import javax.sql.DataSource;
-
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.jdbc.core.JdbcTemplate;
 
-import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
-import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
+import net.solarnetwork.flux.vernemq.webhook.service.impl.SimpleAuthorizationEvaluator;
 
 /**
- * Configuration for JDBC based services.
+ * Configuration for authorization services.
  * 
  * @author matt
  * @version 1.0
  */
 @Configuration
-public class JdbcConfiguration {
-
-  @Value("${solarnetwork.api.host:data.solarnetwork.net}")
-  private String snHost = "data.solarnetwork.net";
-
-  @Value("${solarnewtork.api.authPath:/solarflux/auth}")
-  private String snPath = "/solarflux/auth";
-
-  @Autowired
-  public DataSource dataSource;
-
-  @Autowired
-  public AuthorizationEvaluator authorizationEvaluator;
+public class AuthConfig {
 
   /**
-   * The {@link AuthService}.
+   * The {@link AuthorizationEvaluator}.
    * 
-   * @return the service
+   * @return the evaluator service
    */
   @Bean
-  public JdbcAuthService authService() {
-    JdbcAuthService service = new JdbcAuthService(new JdbcTemplate(dataSource),
-        authorizationEvaluator);
-    service.setSnHost(snHost);
-    service.setSnPath(snPath);
-    return service;
+  public SimpleAuthorizationEvaluator authorizationEvaluator() {
+    return new SimpleAuthorizationEvaluator();
   }
 
 }
