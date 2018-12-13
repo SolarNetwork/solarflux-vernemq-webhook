@@ -23,7 +23,7 @@ spring:
       maxIdle: 2
       testOnBorrow: true
       testWhileIdle: true
-      validationQuery: VALUES CURRENT_DATE
+      validationQuery: SELECT CURRENT_DATE
       timeBetweenEvictionRunsMillis: 35000
       minEvictableIdleTimeMillis: 55000
       validationInterval: 35000
