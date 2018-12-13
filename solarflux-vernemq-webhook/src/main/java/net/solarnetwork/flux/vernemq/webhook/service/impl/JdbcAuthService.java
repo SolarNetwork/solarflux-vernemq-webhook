@@ -18,6 +18,7 @@
 package net.solarnetwork.flux.vernemq.webhook.service.impl;
 
 import static java.lang.System.currentTimeMillis;
+import static net.solarnetwork.flux.vernemq.webhook.Globals.AUDIT_LOG;
 import static net.solarnetwork.util.StringUtils.delimitedStringToMap;
 
 import java.sql.Connection;
@@ -167,6 +168,7 @@ public class JdbcAuthService implements AuthService {
     }
 
     // request is authenticated
+    AUDIT_LOG.info("Authenticated [{}] @ {}{}", tokenId, snHost, snPath);
     return new Response();
   }
 
