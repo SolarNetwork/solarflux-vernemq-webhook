@@ -17,6 +17,7 @@
 
 package net.solarnetwork.flux.vernemq.webhook.test;
 
+import org.springframework.dao.IncorrectResultSizeDataAccessException;
 import org.springframework.jdbc.core.JdbcOperations;
 
 import net.solarnetwork.central.security.SecurityPolicy;
@@ -93,5 +94,37 @@ public final class DbUtils {
             + " VALUES (?,?,?,?::solaruser.user_auth_token_status,?::solaruser.user_auth_token_type,?::jsonb)",
         tokenId, tokenSecret, userId, active ? "Active" : "Disabled", type,
         JsonUtils.getJSONString(policy, null));
+  }
+
+  /**
+   * Insert a new SolarNode association with a user.
+   * 
+   * @param jdbcOps
+   *        the JDBC ops
+   * @param userId
+   *        the user ID
+   * @param nodeId
+   *        the node ID
+   */
+  public static void createUserNode(JdbcOperations jdbcOps, Long userId, Long nodeId) {
+    try {
+      jdbcOps.queryForObject("SELECT node_id FROM solarnet.sn_node WHERE node_id = ?", Long.class,
+          nodeId);
+    } catch (IncorrectResultSizeDataAccessException e) {
+      // assume node does not exist yet
+      Long locId = null;
+      try {
+        locId = jdbcOps.queryForObject("SELECT id FROM solarnet.sn_loc ORDER BY id LIMIT 1",
+            Long.class);
+      } catch (IncorrectResultSizeDataAccessException e2) {
+        // assume location does not exist yet
+        locId = 0L;
+        jdbcOps.update("INSERT INTO solarnet.sn_loc (id,country,time_zone) VALUES (?,?,?)", locId,
+            "-", "UTC");
+      }
+      jdbcOps.update("INSERT INTO solarnet.sn_node (node_id,loc_id) VALUES (?,?)", nodeId, locId);
+    }
+
+    jdbcOps.update("INSERT INTO solaruser.user_node(user_id,node_id) VALUES (?,?)", userId, nodeId);
   }
 }

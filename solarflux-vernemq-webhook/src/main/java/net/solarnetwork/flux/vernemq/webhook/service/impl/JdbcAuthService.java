@@ -192,7 +192,7 @@ public class JdbcAuthService implements AuthService {
       return new Response(ResponseStatus.NEXT);
     }
 
-    log.debug("Authorizing publish request [{}]", request);
+    log.debug("Authorizing publish request {}", request);
     Actor actor = actorForTokenId(tokenId);
     if (actor == null) {
       return new Response(ResponseStatus.NEXT);
@@ -228,7 +228,7 @@ public class JdbcAuthService implements AuthService {
       return new Response(ResponseStatus.NEXT);
     }
 
-    log.debug("Authorizing publish request [{}]", request);
+    log.debug("Authorizing subscribe request {}", request);
     Actor actor = actorForTokenId(tokenId);
     if (actor == null) {
       return new Response(ResponseStatus.NEXT);
