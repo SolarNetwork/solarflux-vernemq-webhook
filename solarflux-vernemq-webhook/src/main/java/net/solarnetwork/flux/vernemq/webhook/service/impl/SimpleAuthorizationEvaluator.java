@@ -45,11 +45,22 @@ import net.solarnetwork.util.StringUtils;
  * </p>
  * 
  * <pre>
- * <code>node/{nodeId}/datum/{sourceId}/{aggregation}</code>
+ * <code>node/{nodeId}/datum/{aggregation}/{sourceId}</code>
  * </pre>
  * 
  * <p>
+ * To support wildcard node IDs, {@link #setUserTopicPrefix(boolean)} must be set to
+ * {@literal true}. When enabled, all successfully authorized topics will have a
+ * <code>user/{userId}/</code> prefix added to them, so the full re-written topics look like this:
+ * </p>
  * 
+ * <pre>
+ * <code>user/{userId}/node/{nodeId}/datum/{aggregation}/{sourceId}</code>
+ * </pre>
+ * 
+ * <p>
+ * Then a {@literal +} wildcard may be used for the topic node ID, as long as the actor's policy
+ * does not restrict it.
  * </p>
  * 
  * @author matt
@@ -61,9 +72,10 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
    * The default value for the {@code nodeDatumTopicRegex} property.
    */
   // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
-  public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "node/(\\d+|\\+)/datum(/.*)?/([^/]+)";
+  public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "node/(\\d+|\\+)/datum/([^/]+)(/.*)";
 
   private Pattern nodeDatumTopicRegex = Pattern.compile(DEFAULT_NODE_DATUM_TOPIC_REGEX);
+  private boolean userTopicPrefix = false;
 
   @Override
   public Message evaluatePublish(Actor actor, Message message) {
@@ -98,12 +110,15 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
         qos = Qos.NotAllowed;
       } else {
         String topicNode = m.group(1);
-        String topicSource = m.group(2);
-        String topicAgg = m.group(3);
+        String topicAgg = m.group(2);
+        String topicSource = m.group(3);
         if (!(topicNodeAllowed(actor, topic, topicNode)
             && topicSourceAllowed(actor, topic, topicSource)
             && topicAggregationAllowed(actor, topic, topicAgg))) {
           qos = Qos.NotAllowed;
+        }
+        if (userTopicPrefix) {
+          topic = "user/" + actor.getUserId() + "/" + topic;
         }
       }
       if (qos.equals(s.getQos()) && topic.equals(s.getTopic())) {
@@ -118,7 +133,9 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
       }
     }
 
-    return (haveChange ? new TopicSettings(res) : topics);
+    TopicSettings result = (haveChange ? new TopicSettings(res) : topics);
+    AUDIT_LOG.info("User {} granted subscribe access to topics [{}]", actor, result);
+    return result;
   }
 
   private PathMatcher createPathMatcher() {
@@ -131,11 +148,25 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
   private boolean topicNodeAllowed(Actor actor, String topic, String topicNode) {
     Set<Long> restrictedNodeIds = (actor.getPolicy() != null ? actor.getPolicy().getNodeIds()
         : null);
-    if ("+".equals(topicNode) && !(restrictedNodeIds == null || restrictedNodeIds.isEmpty())) {
-      // asked for wildcard nodes, but policy restricts access so deny
-      AUDIT_LOG.info("Topic [{}] access denied to {}: wildcard node ID not allowed by policy",
-          topic, actor);
-      return false;
+    if ("+".equals(topicNode)) {
+      // trying to use a wild card node ID
+      if (!userTopicPrefix) {
+        // userTopicPrefix must be enabled for wild card node ID support
+        AUDIT_LOG.info("Topic [{}] access denied to {}: wildcard node ID support not enabled",
+            topic, actor);
+        return false;
+      } else if (actor.getUserId() == null) {
+        // userId required for wild card node ID support
+        AUDIT_LOG.info(
+            "Topic [{}] access denied to {}: wildcard node ID not allowed without user ID", topic,
+            actor);
+        return false;
+      } else if (!(restrictedNodeIds == null || restrictedNodeIds.isEmpty())) {
+        // policy restricts access so deny
+        AUDIT_LOG.info("Topic [{}] access denied to {}: wildcard node ID not allowed by policy",
+            topic, actor);
+        return false;
+      }
     } else {
       Long nodeId;
       try {
@@ -219,8 +250,8 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
    * 
    * <ol>
    * <li>node ID</li>
-   * <li>source ID</li>
    * <li>aggregation</li>
+   * <li>source ID</li>
    * </ol>
    * 
    * <p>
@@ -237,6 +268,31 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
       throw new IllegalArgumentException("nodeDatumTopicRegex must not be null");
     }
     this.nodeDatumTopicRegex = nodeDatumTopicRegex;
+  }
+
+  /**
+   * Get the user topic prefix setting.
+   * 
+   * @return {@literal true} to add a user prefix to all topics
+   */
+  public boolean isUserTopicPrefix() {
+    return userTopicPrefix;
+  }
+
+  /**
+   * Toggle the user topic prefix setting.
+   * 
+   * <p>
+   * When enabled, all topics will have {@literal user/X} added to the start of each topic, where
+   * {@literal X} represents the user ID of the actor. If this is not enabled, then wild card node
+   * IDs will not be allowed in any topic.
+   * </p>
+   * 
+   * @param userTopicPrefix
+   *        {@literal true} to add a user topic prefix
+   */
+  public void setUserTopicPrefix(boolean userTopicPrefix) {
+    this.userTopicPrefix = userTopicPrefix;
   }
 
 }

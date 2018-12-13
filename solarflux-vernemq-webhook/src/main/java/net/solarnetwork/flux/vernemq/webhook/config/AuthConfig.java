@@ -17,6 +17,7 @@
 
 package net.solarnetwork.flux.vernemq.webhook.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -32,6 +33,9 @@ import net.solarnetwork.flux.vernemq.webhook.service.impl.SimpleAuthorizationEva
 @Configuration
 public class AuthConfig {
 
+  @Value("${auth.userTopicPrefixEnabled:true}")
+  private boolean userTopicPrefix = true;
+
   /**
    * The {@link AuthorizationEvaluator}.
    * 
@@ -39,7 +43,9 @@ public class AuthConfig {
    */
   @Bean
   public SimpleAuthorizationEvaluator authorizationEvaluator() {
-    return new SimpleAuthorizationEvaluator();
+    SimpleAuthorizationEvaluator ae = new SimpleAuthorizationEvaluator();
+    ae.setUserTopicPrefix(userTopicPrefix);
+    return ae;
   }
 
 }
