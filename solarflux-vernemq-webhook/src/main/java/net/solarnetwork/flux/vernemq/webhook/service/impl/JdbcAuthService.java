@@ -94,6 +94,11 @@ public class JdbcAuthService implements AuthService {
   // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
   public static final String DEFAULT_AUTHORIZE_CALL = "SELECT user_id,token_type,jpolicy,node_ids FROM solaruser.user_auth_token_node_ids WHERE auth_token = ?";
 
+  /**
+   * The default value for the {@code maxDateSkew} property.
+   */
+  public static final long DEFAULT_MAX_DATE_SKEW = 15 * 60 * 1000L;
+
   private static final Logger log = LoggerFactory.getLogger(JdbcAuthService.class);
 
   private final JdbcOperations jdbcOps;
@@ -102,6 +107,7 @@ public class JdbcAuthService implements AuthService {
   private String authorizeCall = DEFAULT_AUTHORIZE_CALL;
   private String snHost = DEFAULT_SN_HOST;
   private String snPath = DEFAULT_SN_PATH;
+  private long maxDateSkew = DEFAULT_MAX_DATE_SKEW;
 
   /**
    * Constructor.
@@ -128,6 +134,7 @@ public class JdbcAuthService implements AuthService {
         && pwTokens.containsKey(SIGNATURE_PASSWORD_TOKEN))) {
       return new Response(ResponseStatus.NEXT);
     }
+
     final long reqDate;
     try {
       reqDate = Long.parseLong(pwTokens.get(DATE_PASSWORD_TOKEN)) * 1000L;
@@ -135,6 +142,14 @@ public class JdbcAuthService implements AuthService {
       return new Response(
           "Invalid Date component [" + pwTokens.get(DATE_PASSWORD_TOKEN) + "]: " + e.getMessage());
     }
+
+    final long reqDateSkew = Math.abs(System.currentTimeMillis() - reqDate);
+    if (maxDateSkew >= 0 && reqDateSkew > maxDateSkew) {
+      AUDIT_LOG.info("Access denied to [{}]: date {} skew {} > {} maximum", tokenId, reqDate,
+          reqDateSkew, maxDateSkew);
+      return new Response(ResponseStatus.NEXT);
+    }
+
     final String sig = pwTokens.get(SIGNATURE_PASSWORD_TOKEN);
     if (sig.isEmpty()) {
       return new Response(ResponseStatus.NEXT);
@@ -254,7 +269,7 @@ public class JdbcAuthService implements AuthService {
   /**
    * Get the configured authenticate JDBC call.
    * 
-   * @return the authenticate JDBC call
+   * @return the authenticate JDBC call; defaults to {@link #DEFAULT_AUTHENTICATE_CALL}
    */
   public String getAuthenticateCall() {
     return authenticateCall;
@@ -305,6 +320,15 @@ public class JdbcAuthService implements AuthService {
   }
 
   /**
+   * Get the authorization JDBC call to use.
+   * 
+   * @return the JDBC call; defaults to {@link #DEFAULT_AUTHORIZE_CALL}
+   */
+  public String getAuthorizeCall() {
+    return authorizeCall;
+  }
+
+  /**
    * Set the authorization JDBC call to use.
    * 
    * <p>
@@ -348,7 +372,7 @@ public class JdbcAuthService implements AuthService {
   /**
    * Get the configured SolarNetwork host.
    * 
-   * @return the host
+   * @return the host; defaults to {@link #DEFAULT_SN_HOST}
    */
   public String getSnHost() {
     return snHost;
@@ -372,7 +396,7 @@ public class JdbcAuthService implements AuthService {
   /**
    * Get the configured SolarNetwork path.
    * 
-   * @return the path
+   * @return the path; defaults to {@link #DEFAULT_SN_PATH}
    */
   public String getSnPath() {
     return snPath;
@@ -391,6 +415,25 @@ public class JdbcAuthService implements AuthService {
       throw new IllegalArgumentException("snPath must not be null");
     }
     this.snPath = snPath;
+  }
+
+  /**
+   * Get the maximum date skew allowed during authentication.
+   * 
+   * @return the maximum date skew, in milliseconds; defaults to {@link #DEFAULT_MAX_DATE_SKEW}
+   */
+  public long getMaxDateSkew() {
+    return maxDateSkew;
+  }
+
+  /**
+   * Set the maximum date skew allowed during authentication.
+   * 
+   * @param maxDateSkew
+   *        the maximum date skew, in milliseconds
+   */
+  public void setMaxDateSkew(long maxDateSkew) {
+    this.maxDateSkew = maxDateSkew;
   }
 
 }

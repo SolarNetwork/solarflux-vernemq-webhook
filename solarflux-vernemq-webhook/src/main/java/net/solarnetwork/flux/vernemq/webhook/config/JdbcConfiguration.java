@@ -44,6 +44,9 @@ public class JdbcConfiguration {
   @Value("${solarnewtork.api.authPath:/solarflux/auth}")
   private String snPath = "/solarflux/auth";
 
+  @Value("${solarnetwork.api.maxDateSkew:900000}")
+  private long authMaxDateSkew = JdbcAuthService.DEFAULT_MAX_DATE_SKEW;
+
   @Autowired
   public DataSource dataSource;
 
@@ -61,6 +64,7 @@ public class JdbcConfiguration {
         authorizationEvaluator);
     service.setSnHost(snHost);
     service.setSnPath(snPath);
+    service.setMaxDateSkew(authMaxDateSkew);
     return service;
   }
 
