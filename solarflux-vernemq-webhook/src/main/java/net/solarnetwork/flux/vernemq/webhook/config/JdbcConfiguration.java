@@ -47,6 +47,9 @@ public class JdbcConfiguration {
   @Value("${solarnetwork.api.maxDateSkew:900000}")
   private long authMaxDateSkew = JdbcAuthService.DEFAULT_MAX_DATE_SKEW;
 
+  @Value("${mqtt.forceCleanSession:true}")
+  private boolean forceCleanSession = true;
+
   @Autowired
   public DataSource dataSource;
 
@@ -65,6 +68,7 @@ public class JdbcConfiguration {
     service.setSnHost(snHost);
     service.setSnPath(snPath);
     service.setMaxDateSkew(authMaxDateSkew);
+    service.setForceCleanSession(forceCleanSession);
     return service;
   }
 

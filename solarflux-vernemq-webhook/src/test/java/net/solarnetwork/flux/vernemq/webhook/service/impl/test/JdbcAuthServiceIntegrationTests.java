@@ -49,6 +49,7 @@ import net.solarnetwork.central.security.BasicSecurityPolicy;
 import net.solarnetwork.central.security.SecurityPolicy;
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
+import net.solarnetwork.flux.vernemq.webhook.domain.ResponseModifiers;
 import net.solarnetwork.flux.vernemq.webhook.domain.ResponseStatus;
 import net.solarnetwork.flux.vernemq.webhook.domain.ResponseTopics;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
@@ -81,6 +82,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
   public void setup() {
     jdbcOps = new JdbcTemplate(dataSource);
     authService = new JdbcAuthService(jdbcOps, new SimpleAuthorizationEvaluator());
+    authService.setMaxDateSkew(-1L);
   }
 
   private static final String password(long date, String signature) {
@@ -109,6 +111,113 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
 
     // then
     assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("No modifiers", r.getModifiers(), nullValue());
+  }
+
+  @Test
+  public void authenticateOkMissingCleanSessionForced() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+    final String tokenId = "test.token";
+    final String tokenSecret = "foobar";
+    DbUtils.createToken(jdbcOps, tokenId, tokenSecret, userId, true,
+        DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
+    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
+
+    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+        .withPassword(
+            password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
+        .build();
+
+    authService.setForceCleanSession(true);
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("Modifiers", r.getModifiers(),
+        pojo(ResponseModifiers.class).withProperty("cleanSession", equalTo(true)));
+  }
+
+  @Test
+  public void authenticateOkExplicitCleanSessionForced() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+    final String tokenId = "test.token";
+    final String tokenSecret = "foobar";
+    DbUtils.createToken(jdbcOps, tokenId, tokenSecret, userId, true,
+        DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
+    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
+
+    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+        .withPassword(
+            password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
+        .withCleanSession(false).build();
+
+    authService.setForceCleanSession(true);
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("Modifiers", r.getModifiers(),
+        pojo(ResponseModifiers.class).withProperty("cleanSession", equalTo(true)));
+  }
+
+  @Test
+  public void authenticateOkExplicitCleanSessionOk() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+    final String tokenId = "test.token";
+    final String tokenSecret = "foobar";
+    DbUtils.createToken(jdbcOps, tokenId, tokenSecret, userId, true,
+        DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
+    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
+
+    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+        .withPassword(
+            password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
+        .withCleanSession(true).build();
+
+    authService.setForceCleanSession(true);
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("Modifiers", r.getModifiers(), nullValue());
+  }
+
+  @Test
+  public void authenticateFailedDateSkewTooLarge() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+    final String tokenId = "test.token";
+    final String tokenSecret = "foobar";
+    DbUtils.createToken(jdbcOps, tokenId, tokenSecret, userId, true,
+        DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
+    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
+
+    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+        .withPassword(
+            password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
+        .build();
+
+    authService.setMaxDateSkew(1000L);
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.NEXT));
+    assertThat("No modifiers", r.getModifiers(), nullValue());
   }
 
   private TopicSettings topics(String... topics) {
@@ -131,7 +240,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final String tokenId = UUID.randomUUID().toString();
 
     SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
-        .withTopics(topics("node/1/datum/foo/0")).build();
+        .withTopics(topics("node/1/datum/0/foo")).build();
 
     // when
     Response r = authService.authorizeRequest(req);
@@ -152,7 +261,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final String tokenId = createReadToken(userId, "secret", null);
 
     SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
-        .withTopics(topics("node/1/datum/foo/0")).build();
+        .withTopics(topics("node/1/datum/0/foo")).build();
 
     // when
     Response r = authService.authorizeRequest(req);
@@ -180,7 +289,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final String tokenId = createReadToken(userId, "secret", policy);
 
     SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
-        .withTopics(topics("node/1/datum/foo/0", "node/1/datum/bar/0")).build();
+        .withTopics(topics("node/1/datum/0/foo", "node/1/datum/0/bar")).build();
 
     // when
     Response r = authService.authorizeRequest(req);
@@ -203,7 +312,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final String tokenId = createReadToken(userId, "secret", policy);
 
     SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
-        .withTopics(topics("node/2/datum/foo/0")).build();
+        .withTopics(topics("node/2/datum/0/foo")).build();
 
     // when
     Response r = authService.authorizeRequest(req);
@@ -217,7 +326,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
         pojo(ResponseTopics.class)
           .withProperty("settings", contains(
               pojo(TopicSubscriptionSetting.class)
-                .withProperty("topic", equalTo("node/2/datum/foo/0"))
+                .withProperty("topic", equalTo("node/2/datum/0/foo"))
                 .withProperty("qos", equalTo(Qos.NotAllowed))
         )));
     // @formatter:on
@@ -237,7 +346,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final String tokenId = createReadToken(userId, "secret", policy);
 
     SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
-        .withTopics(topics("node/1/datum/foo/0", "node/1/datum/bar/0")).build();
+        .withTopics(topics("node/1/datum/0/foo", "node/1/datum/0/bar")).build();
 
     // when
     Response r = authService.authorizeRequest(req);
@@ -251,10 +360,10 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
         pojo(ResponseTopics.class)
           .withProperty("settings", contains(
               pojo(TopicSubscriptionSetting.class)
-                .withProperty("topic", equalTo("node/1/datum/foo/0"))
+                .withProperty("topic", equalTo("node/1/datum/0/foo"))
                 .withProperty("qos", equalTo(Qos.AtLeastOnce)),
               pojo(TopicSubscriptionSetting.class)
-                .withProperty("topic", equalTo("node/1/datum/bar/0"))
+                .withProperty("topic", equalTo("node/1/datum/0/bar"))
                 .withProperty("qos", equalTo(Qos.NotAllowed))
         )));
     // @formatter:on

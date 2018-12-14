@@ -41,6 +41,7 @@ import net.solarnetwork.flux.vernemq.webhook.domain.ResponseStatus;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishModifiers;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterModifiers;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
@@ -108,6 +109,7 @@ public class JdbcAuthService implements AuthService {
   private String snHost = DEFAULT_SN_HOST;
   private String snPath = DEFAULT_SN_PATH;
   private long maxDateSkew = DEFAULT_MAX_DATE_SKEW;
+  private boolean forceCleanSession = false;
 
   /**
    * Constructor.
@@ -184,6 +186,10 @@ public class JdbcAuthService implements AuthService {
 
     // request is authenticated
     AUDIT_LOG.info("Authenticated [{}] @ {}{}", tokenId, snHost, snPath);
+    if (forceCleanSession
+        && (request.getCleanSession() == null || !request.getCleanSession().booleanValue())) {
+      return new Response(RegisterModifiers.builder().withCleanSession(true).build());
+    }
     return new Response();
   }
 
@@ -434,6 +440,25 @@ public class JdbcAuthService implements AuthService {
    */
   public void setMaxDateSkew(long maxDateSkew) {
     this.maxDateSkew = maxDateSkew;
+  }
+
+  /**
+   * Get the flag that forces the "clean session" setting on authentication.
+   * 
+   * @return {@literal true} to force the "clean session" setting; defaults to {@literal false}
+   */
+  public boolean isForceCleanSession() {
+    return forceCleanSession;
+  }
+
+  /**
+   * Toggle the flag that forces the "clean session" setting on authentication.
+   * 
+   * @param forceCleanSession
+   *        {@literal true} to force the "clean session" setting
+   */
+  public void setForceCleanSession(boolean forceCleanSession) {
+    this.forceCleanSession = forceCleanSession;
   }
 
 }
