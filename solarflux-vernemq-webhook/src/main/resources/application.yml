@@ -55,3 +55,14 @@ debugMode: true
 logging:
   level:
     net.solarnetwork: DEBUG
+
+---
+spring:
+  profiles: production
+
+debugMode: false
+
+logging:
+  level:
+    net.solarnetwork: INFO
+    
