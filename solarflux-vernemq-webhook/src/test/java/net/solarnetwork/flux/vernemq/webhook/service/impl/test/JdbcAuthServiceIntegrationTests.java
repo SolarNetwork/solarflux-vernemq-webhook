@@ -54,6 +54,7 @@ import net.solarnetwork.flux.vernemq.webhook.domain.ResponseStatus;
 import net.solarnetwork.flux.vernemq.webhook.domain.ResponseTopics;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSubscriptionSetting;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
@@ -220,6 +221,69 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     assertThat("No modifiers", r.getModifiers(), nullValue());
   }
 
+  @Test
+  public void authenticateNodeOk() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+
+    final Long nodeId = 1L;
+    DbUtils.createUserNode(jdbcOps, userId, nodeId);
+
+    RegisterRequest req = RegisterRequest.builder().withClientId(nodeId.toString())
+        .withUsername(authService.getPublishUsername()).build();
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("No modifiers", r.getModifiers(), nullValue());
+  }
+
+  @Test
+  public void authenticateNodeOkMissingCleanSessionForced() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+
+    final Long nodeId = 1L;
+    DbUtils.createUserNode(jdbcOps, userId, nodeId);
+
+    RegisterRequest req = RegisterRequest.builder().withClientId(nodeId.toString())
+        .withUsername(authService.getPublishUsername()).build();
+
+    authService.setForceCleanSession(true);
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("Modifiers", r.getModifiers(),
+        pojo(ResponseModifiers.class).withProperty("cleanSession", equalTo(true)));
+  }
+
+  @Test
+  public void authenticateNodeFailedMissingClientId() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+
+    final Long nodeId = 1L;
+    DbUtils.createUserNode(jdbcOps, userId, nodeId);
+
+    RegisterRequest req = RegisterRequest.builder().withUsername(authService.getPublishUsername())
+        .build();
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.NEXT));
+    assertThat("No modifiers", r.getModifiers(), nullValue());
+  }
+
   private TopicSettings topics(String... topics) {
     List<TopicSubscriptionSetting> settings = Arrays.stream(topics)
         .map(s -> TopicSubscriptionSetting.builder().withTopic(s).withQos(Qos.AtLeastOnce).build())
@@ -367,5 +431,27 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
                 .withProperty("qos", equalTo(Qos.NotAllowed))
         )));
     // @formatter:on
+  }
+
+  @Test
+  public void publishNodeOk() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+
+    final Long nodeId = 1L;
+    DbUtils.createUserNode(jdbcOps, userId, nodeId);
+
+    PublishRequest req = PublishRequest.builder().withClientId(nodeId.toString())
+        .withUsername(authService.getPublishUsername()).withTopic("node/1/datum/0/foo")
+        .withQos(Qos.AtMostOnce).build();
+
+    // when
+    Response r = authService.authorizeRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("Message not modified", r.getModifiers(), nullValue());
+
   }
 }

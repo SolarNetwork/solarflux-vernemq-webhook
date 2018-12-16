@@ -34,6 +34,7 @@ import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSubscriptionSetting;
+import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
 import net.solarnetwork.util.StringUtils;
 
@@ -88,8 +89,43 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
       AUDIT_LOG.info("Topic [{}] access denied to {}: publish not allowed", topic, actor);
       return null;
     }
-    // TODO: publish support
-    return null;
+
+    Qos qos = message.getQos();
+    Matcher m = nodeDatumTopicRegex.matcher(topic);
+    if (!m.matches()) {
+      AUDIT_LOG.info("Topic [{}] access denied to {}: invalid topic pattern", topic, actor);
+      return null;
+    } else {
+      String topicNode = m.group(1);
+      String topicAgg = m.group(2);
+      String topicSource = m.group(3);
+      if (!(topicNodeAllowed(actor, topic, topicNode)
+          && topicSourceAllowed(actor, topic, topicSource)
+          && topicAggregationAllowed(actor, topic, topicAgg))) {
+        return null;
+      }
+      if (userTopicPrefix) {
+        topic = "user/" + actor.getUserId() + "/" + topic;
+      }
+    }
+
+    Message result;
+    if (qos.equals(message.getQos()) && topic.equals(message.getTopic())) {
+      // no change
+      result = message;
+    } else {
+      // @formatter:off
+      result = PublishRequest.builder()
+          .withTopic(topic)
+          .withQos(qos)
+          .withRetain(message.getRetain())
+          .withPayload(message.getPayload())
+          .build();
+      // @formatter:on
+    }
+
+    AUDIT_LOG.info("User {} granted publish {}", actor, result);
+    return result;
   }
 
   @Override

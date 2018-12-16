@@ -116,7 +116,7 @@ public class ActorDetailsRowMapper implements RowMapper<Actor> {
       policy = JsonUtils.getObjectFromJSON(policyJson, BasicSecurityPolicy.class);
     }
 
-    boolean publishAllowed = "User".equals(tokenType);
+    boolean publishAllowed = "Node".equals(tokenType);
 
     Set<Long> nodeIds = null;
     Array dbNodeIds = rs.getArray(nodeIdsCol);

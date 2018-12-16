@@ -24,8 +24,10 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
+import static org.hamcrest.Matchers.sameInstance;
 import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
@@ -88,6 +90,10 @@ public class SimpleAuthorizationEvaluatorTests {
     return new ActorDetails(UUID.randomUUID().toString(), publishAllowed, 1L, policy, nodeIds);
   }
 
+  private ActorDetails actor(Long node) {
+    return new ActorDetails(1L, node);
+  }
+
   private TopicSettings requestForTopics(String... topics) {
     List<TopicSubscriptionSetting> settings = Arrays.stream(topics)
         .map(s -> TopicSubscriptionSetting.builder().withTopic(s).withQos(Qos.AtLeastOnce).build())
@@ -96,7 +102,7 @@ public class SimpleAuthorizationEvaluatorTests {
   }
 
   private Message requestMessage(String topic) {
-    return PublishRequest.builder().withTopic(topic).build();
+    return PublishRequest.builder().withTopic(topic).withQos(Qos.AtLeastOnce).build();
   }
 
   @Test
@@ -924,10 +930,42 @@ public class SimpleAuthorizationEvaluatorTests {
   }
 
   @Test
-  public void publishNoPolicyActorNotAllowed() {
+  public void publishActorNotAllowed() {
     ActorDetails actor = actor(null, false, 2L);
     Message request = requestMessage("node/2/datum/0/foo");
     Message result = service.evaluatePublish(actor, request);
     assertThat("Result not available", result, nullValue());
+  }
+
+  @Test
+  public void publishAllowedNoChange() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("node/2/datum/0/foo");
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result Ok", result, sameInstance(request));
+  }
+
+  @Test
+  public void publishDeniedWrongNode() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("node/3/datum/0/foo");
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result not available", result, nullValue());
+  }
+
+  @Test
+  public void publishAllowedWithUserPrefix() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result Ok", result, allOf(notNullValue(), not(sameInstance(request))));
+    // @formatter:off
+    assertThat("Topic allowed and rewritten with user prefix",
+        result,
+        pojo(Message.class)
+            .withProperty("topic", equalTo("user/1/node/2/datum/0/foo"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)));
+    // @formatter:on
   }
 }

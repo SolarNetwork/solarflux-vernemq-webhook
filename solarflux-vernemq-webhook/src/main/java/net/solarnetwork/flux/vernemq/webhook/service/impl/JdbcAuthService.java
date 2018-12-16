@@ -50,6 +50,12 @@ import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
 /**
  * {@link AuthService} implementation that uses JDBC to authenticate and authorize requests.
  * 
+ * <p>
+ * Two different authorization paths are performed here, one for subscription and the other for
+ * publication events. See {@link #authorizeRequest(SubscribeRequest)} and
+ * {@link #authorizeRequest(PublishRequest)} for details.
+ * </p>
+ * 
  * @author matt
  * @version 1.0
  */
@@ -84,13 +90,19 @@ public class JdbcAuthService implements AuthService {
   public static final String DEFAULT_SN_PATH = "/solarflux/auth";
 
   /**
-   * The default value for the {@code jdbcCall} property.
+   * The default value for the {@code authenticateCall} property.
    */
   // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
   public static final String DEFAULT_AUTHENTICATE_CALL = "SELECT user_id,token_type,jpolicy FROM solaruser.snws2_find_verified_token_details(?,?,?,?,?)";
 
   /**
-   * The default value for the {@code jdbcCall} property.
+   * The default value for the {@code authorizeNodeCall} property.
+   */
+  // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
+  public static final String DEFAULT_AUTHORIZE_NODE_CALL = "SELECT user_id,'Node' AS token_type,NULL AS jpolicy,ARRAY[node_id] AS node_ids FROM solaruser.user_node WHERE node_id = ?";
+
+  /**
+   * The default value for the {@code authorizeCall} property.
    */
   // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
   public static final String DEFAULT_AUTHORIZE_CALL = "SELECT user_id,token_type,jpolicy,node_ids FROM solaruser.user_auth_token_node_ids WHERE auth_token = ?";
@@ -100,16 +112,23 @@ public class JdbcAuthService implements AuthService {
    */
   public static final long DEFAULT_MAX_DATE_SKEW = 15 * 60 * 1000L;
 
+  /**
+   * The default value for the {@code publishUsername} property.
+   */
+  public static final String DEFAULT_PUBLISH_USERNAME = "solarnode";
+
   private static final Logger log = LoggerFactory.getLogger(JdbcAuthService.class);
 
   private final JdbcOperations jdbcOps;
   private final AuthorizationEvaluator authEvaluator;
   private String authenticateCall = DEFAULT_AUTHENTICATE_CALL;
+  private String authorizeNodeCall = DEFAULT_AUTHORIZE_NODE_CALL;
   private String authorizeCall = DEFAULT_AUTHORIZE_CALL;
   private String snHost = DEFAULT_SN_HOST;
   private String snPath = DEFAULT_SN_PATH;
   private long maxDateSkew = DEFAULT_MAX_DATE_SKEW;
   private boolean forceCleanSession = false;
+  private String publishUsername = DEFAULT_PUBLISH_USERNAME;
 
   /**
    * Constructor.
@@ -125,12 +144,44 @@ public class JdbcAuthService implements AuthService {
     this.authEvaluator = authEvaluator;
   }
 
-  @Override
-  public Response authenticateRequest(RegisterRequest request) {
-    final String tokenId = request.getUsername();
-    if (tokenId == null || tokenId.isEmpty()) {
+  private Response authorizeNodeRequest(RegisterRequest request) {
+    Long nodeId;
+    try {
+      nodeId = Long.valueOf(request.getClientId());
+    } catch (NumberFormatException e) {
       return new Response(ResponseStatus.NEXT);
     }
+
+    Actor actor = actorForNodeId(nodeId);
+    if (actor == null) {
+      AUDIT_LOG.info("Access denied to node [{}]: not found", nodeId);
+      return new Response(ResponseStatus.NEXT);
+    }
+
+    AUDIT_LOG.info("Authorized node [{}]", nodeId);
+    if (forceCleanSession
+        && (request.getCleanSession() == null || !request.getCleanSession().booleanValue())) {
+      return new Response(RegisterModifiers.builder().withCleanSession(true).build());
+    }
+    return new Response();
+  }
+
+  @Override
+  public Response authenticateRequest(RegisterRequest request) {
+    final String username = request.getUsername();
+    if (username == null || username.isEmpty()) {
+      return new Response(ResponseStatus.NEXT);
+    }
+
+    if (publishUsername.equalsIgnoreCase(username)) {
+      // NOTE: we assume that node authentication has already been performed externally,
+      //       e.g. via X.509 certificate; we are simply authorizing based on the existence
+      //       of the provided node ID here
+      return authorizeNodeRequest(request);
+    }
+
+    final String tokenId = username;
+
     final Map<String, String> pwTokens = delimitedStringToMap(request.getPassword(), ",", "=");
     if (pwTokens == null || !(pwTokens.containsKey(DATE_PASSWORD_TOKEN)
         && pwTokens.containsKey(SIGNATURE_PASSWORD_TOKEN))) {
@@ -208,15 +259,45 @@ public class JdbcAuthService implements AuthService {
     return (results != null && !results.isEmpty() ? results.get(0) : null);
   }
 
+  private Actor actorForNodeId(Long nodeId) {
+    List<Actor> results = jdbcOps.query(new PreparedStatementCreator() {
+
+      @Override
+      public PreparedStatement createPreparedStatement(Connection con) throws SQLException {
+        PreparedStatement stmt = con.prepareStatement(authorizeNodeCall,
+            ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_READ_ONLY);
+        stmt.setLong(1, nodeId);
+        return stmt;
+      }
+    }, new ActorDetailsRowMapper(null));
+
+    return (results != null && !results.isEmpty() ? results.get(0) : null);
+  }
+
+  /**
+   * Authorize a publish request.
+   * 
+   * <p>
+   * This implementation assumes the {@code clientId} is the node ID. The {@code username} must be
+   * {@literal solarnode} (case insensitive).
+   * </p>
+   */
   @Override
   public Response authorizeRequest(PublishRequest request) {
-    final String tokenId = request.getUsername();
-    if (tokenId == null || tokenId.isEmpty()) {
+    final String username = request.getUsername();
+    if (!publishUsername.equalsIgnoreCase(username)) {
+      return new Response(ResponseStatus.NEXT);
+    }
+    final String clientId = request.getClientId();
+    final Long nodeId;
+    try {
+      nodeId = Long.valueOf(clientId);
+    } catch (NumberFormatException e) {
       return new Response(ResponseStatus.NEXT);
     }
 
-    log.debug("Authorizing publish request {}", request);
-    Actor actor = actorForTokenId(tokenId);
+    log.debug("Authorizing publish request for node {}", request);
+    Actor actor = actorForNodeId(nodeId);
     if (actor == null) {
       return new Response(ResponseStatus.NEXT);
     }
@@ -244,6 +325,14 @@ public class JdbcAuthService implements AuthService {
     return new Response(mods);
   }
 
+  /**
+   * Authorize a subscribe request.
+   * 
+   * <p>
+   * This implementation assumes the {@code username} is a SolarNetwork security token ID. Topics
+   * will be restricted to only use valid for the associated token.
+   * </p>
+   */
   @Override
   public Response authorizeRequest(SubscribeRequest request) {
     final String tokenId = request.getUsername();
@@ -320,7 +409,7 @@ public class JdbcAuthService implements AuthService {
    */
   public void setAuthenticateCall(String jdbcCall) {
     if (jdbcCall == null) {
-      throw new IllegalArgumentException("snHost must not be null");
+      throw new IllegalArgumentException("jdbcCall must not be null");
     }
     this.authenticateCall = jdbcCall;
   }
@@ -370,7 +459,7 @@ public class JdbcAuthService implements AuthService {
    */
   public void setAuthorizeCall(String jdbcCall) {
     if (jdbcCall == null) {
-      throw new IllegalArgumentException("snHost must not be null");
+      throw new IllegalArgumentException("jdbcCall must not be null");
     }
     this.authorizeCall = jdbcCall;
   }
@@ -459,6 +548,83 @@ public class JdbcAuthService implements AuthService {
    */
   public void setForceCleanSession(boolean forceCleanSession) {
     this.forceCleanSession = forceCleanSession;
+  }
+
+  /**
+   * Get the configured authorize node JDBC call.
+   * 
+   * @return the JDBC call; defaults to {@link #DEFAULT_AUTHORIZE_NODE_CALL}
+   */
+  public String getAuthorizeNodeCall() {
+    return authorizeNodeCall;
+  }
+
+  /**
+   * Set the authorize node JDBC call to use.
+   * 
+   * <p>
+   * This JDBC statement is used to authorize node requests. This JDBC statement is expected to take
+   * the following parameters:
+   * </p>
+   * 
+   * <ol>
+   * <li><b>node_Id</b> ({@code Long}) - the SolarNetwork node ID</li>
+   * </ol>
+   * 
+   * <p>
+   * A result set with the following columns is expected to be returned:
+   * </p>
+   * 
+   * <ol>
+   * <li><b>user_id</b> ({@code Long}) - the SolarNetwork user ID that owns the token</li>
+   * <li><b>token_type</b> ({@code String}) - the SolarNetwork token type, e.g. {@literal Node}</li>
+   * <li><b>jpolicy</b> ({@code String}) - the SolarNetwork security policy associated with the
+   * node</li>
+   * <li><b>node_ids</b> ({@code Long[]}) - the node ID, as an array
+   * </ol>
+   * 
+   * <p>
+   * If the given {@code nodeId} is not found, an empty result set is expected.
+   * </p>
+   * 
+   * @param jdbcCall
+   *        the JDBC call
+   * @throws IllegalArgumentException
+   *         if {@code jdbcCall} is {@literal null}
+   */
+  public void setAuthorizeNodeCall(String jdbcCall) {
+    if (jdbcCall == null) {
+      throw new IllegalArgumentException("jdbcCall must not be null");
+    }
+    this.authorizeNodeCall = jdbcCall;
+  }
+
+  /**
+   * Get the publish username.
+   * 
+   * <p>
+   * This username is required when publishing. The {@code clientId} must be a SolarNode ID.
+   * </p>
+   * 
+   * @return the username for publishing
+   */
+  public String getPublishUsername() {
+    return publishUsername;
+  }
+
+  /**
+   * Set the username required for publishing.
+   * 
+   * @param publishUsername
+   *        the publish username
+   * @throws IllegalArgumentException
+   *         if {@code publishUsername} is {@literal null}
+   */
+  public void setPublishUsername(String publishUsername) {
+    if (publishUsername == null) {
+      throw new IllegalArgumentException("publishUsername must not be null");
+    }
+    this.publishUsername = publishUsername;
   }
 
 }

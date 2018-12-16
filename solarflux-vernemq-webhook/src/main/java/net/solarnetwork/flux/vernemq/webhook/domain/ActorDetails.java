@@ -18,6 +18,7 @@
 package net.solarnetwork.flux.vernemq.webhook.domain;
 
 import static java.util.Collections.emptySet;
+import static java.util.Collections.singleton;
 import static java.util.Collections.unmodifiableSet;
 import static java.util.stream.Collectors.toCollection;
 
@@ -72,6 +73,24 @@ public class ActorDetails implements Actor {
     this.allowedNodeIds = resolveAllowedNodeIds(this.userNodeIds, policy);
   }
 
+  /**
+   * Construct for node publishing.
+   * 
+   * <p>
+   * This constructor sets {@code publishAllowed} to {@literal true} and configures the allowed node
+   * IDs to just {@code nodeId}. This is designed to be used for publishing by a node to its own
+   * topics.
+   * </p>
+   * 
+   * @param userId
+   *        the node owner ID
+   * @param nodeId
+   *        the node ID
+   */
+  public ActorDetails(Long userId, Long nodeId) {
+    this(null, true, userId, null, singleton(nodeId));
+  }
+
   private static Set<Long> resolveAllowedNodeIds(Set<Long> userNodeIds, SecurityPolicy policy) {
     Set<Long> nodeIds = userNodeIds;
     if (policy != null && policy.getNodeIds() != null) {
@@ -99,7 +118,9 @@ public class ActorDetails implements Actor {
 
   @Override
   public String toString() {
-    return tokenId + " (" + userId + ")";
+    return (tokenId != null ? tokenId
+        : !userNodeIds.isEmpty() ? "Node-" + userNodeIds.iterator().next() : "-") + " (" + userId
+        + ")";
   }
 
   @Override
