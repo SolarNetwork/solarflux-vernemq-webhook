@@ -17,14 +17,17 @@
 
 package net.solarnetwork.flux.vernemq.webhook.config;
 
+import javax.cache.Cache;
 import javax.sql.DataSource;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
 
+import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
@@ -56,6 +59,10 @@ public class JdbcConfiguration {
   @Autowired
   public AuthorizationEvaluator authorizationEvaluator;
 
+  @Autowired(required = false)
+  @Qualifier("actor")
+  public Cache<String, Actor> actorCache;
+
   /**
    * The {@link AuthService}.
    * 
@@ -69,6 +76,7 @@ public class JdbcConfiguration {
     service.setSnPath(snPath);
     service.setMaxDateSkew(authMaxDateSkew);
     service.setForceCleanSession(forceCleanSession);
+    service.setActorCache(actorCache);
     return service;
   }
 

@@ -46,6 +46,7 @@ checkstyle {
 
 dependencies {
 	compile "org.springframework.boot:spring-boot-starter:${springBootVersion}"
+	compile "org.springframework.boot:spring-boot-starter-cache:${springBootVersion}"
 	compile "org.springframework.boot:spring-boot-starter-jdbc:${springBootVersion}"
 	compile "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
 
@@ -55,6 +56,10 @@ dependencies {
 	// DB
 	runtime 'org.postgresql:postgresql:42.2.5'
 		
+	// JCache
+	compile 'javax.cache:cache-api:1.0.0'
+	compile 'org.ehcache:ehcache:3.6.2'
+
 	// JSON
 	compile "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
 	compile "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"

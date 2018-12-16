@@ -29,6 +29,8 @@ import java.sql.Timestamp;
 import java.util.List;
 import java.util.Map;
 
+import javax.cache.Cache;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcOperations;
@@ -129,6 +131,7 @@ public class JdbcAuthService implements AuthService {
   private long maxDateSkew = DEFAULT_MAX_DATE_SKEW;
   private boolean forceCleanSession = false;
   private String publishUsername = DEFAULT_PUBLISH_USERNAME;
+  private Cache<String, Actor> actorCache;
 
   /**
    * Constructor.
@@ -245,6 +248,14 @@ public class JdbcAuthService implements AuthService {
   }
 
   private Actor actorForTokenId(String tokenId) {
+    final Cache<String, Actor> cache = getActorCache();
+    final String actorCacheKey = cacheKeyForTokenId(tokenId);
+    if (cache != null && actorCacheKey != null) {
+      Actor actor = cache.get(actorCacheKey);
+      if (actor != null) {
+        return actor;
+      }
+    }
     List<Actor> results = jdbcOps.query(new PreparedStatementCreator() {
 
       @Override
@@ -256,10 +267,25 @@ public class JdbcAuthService implements AuthService {
       }
     }, new ActorDetailsRowMapper(tokenId));
 
-    return (results != null && !results.isEmpty() ? results.get(0) : null);
+    if (results != null && !results.isEmpty()) {
+      Actor actor = results.get(0);
+      if (cache != null && actorCacheKey != null) {
+        cache.put(actorCacheKey, actor);
+      }
+      return actor;
+    }
+    return null;
   }
 
   private Actor actorForNodeId(Long nodeId) {
+    final Cache<String, Actor> cache = getActorCache();
+    final String actorCacheKey = cacheKeyForNode(nodeId);
+    if (cache != null && actorCacheKey != null) {
+      Actor actor = cache.get(actorCacheKey);
+      if (actor != null) {
+        return actor;
+      }
+    }
     List<Actor> results = jdbcOps.query(new PreparedStatementCreator() {
 
       @Override
@@ -271,7 +297,28 @@ public class JdbcAuthService implements AuthService {
       }
     }, new ActorDetailsRowMapper(null));
 
-    return (results != null && !results.isEmpty() ? results.get(0) : null);
+    if (results != null && !results.isEmpty()) {
+      Actor actor = results.get(0);
+      if (cache != null && actorCacheKey != null) {
+        cache.put(actorCacheKey, actor);
+      }
+      return actor;
+    }
+    return null;
+  }
+
+  private String cacheKeyForNode(Long nodeId) {
+    if (nodeId == null) {
+      return null;
+    }
+    return "Node-" + nodeId;
+  }
+
+  private String cacheKeyForTokenId(String tokenId) {
+    if (tokenId == null) {
+      return null;
+    }
+    return "Token-" + tokenId;
   }
 
   /**
@@ -625,6 +672,25 @@ public class JdbcAuthService implements AuthService {
       throw new IllegalArgumentException("publishUsername must not be null");
     }
     this.publishUsername = publishUsername;
+  }
+
+  /**
+   * Get the configured actor cache.
+   * 
+   * @return the actor cache
+   */
+  public Cache<String, Actor> getActorCache() {
+    return actorCache;
+  }
+
+  /**
+   * Configure a actor cache.
+   * 
+   * @param actorCache
+   *        the cache to use for actors
+   */
+  public void setActorCache(Cache<String, Actor> actorCache) {
+    this.actorCache = actorCache;
   }
 
 }
