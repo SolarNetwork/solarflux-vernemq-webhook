@@ -71,6 +71,7 @@ dependencies {
 	compile 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.15.0'
 
 	// Utils
+    compile 'com.github.veqryn:cidr-ip-trie:1.0.1'
     
     // Testing
     testCompile "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"

@@ -53,6 +53,9 @@ public class JdbcConfiguration {
   @Value("${mqtt.forceCleanSession:true}")
   private boolean forceCleanSession = true;
 
+  @Value("${auth.nodeIpMask:#{null}}")
+  private String nodeIpMask = null;
+
   @Autowired
   public DataSource dataSource;
 
@@ -77,6 +80,7 @@ public class JdbcConfiguration {
     service.setMaxDateSkew(authMaxDateSkew);
     service.setForceCleanSession(forceCleanSession);
     service.setActorCache(actorCache);
+    service.setIpMask(nodeIpMask);
     return service;
   }
 

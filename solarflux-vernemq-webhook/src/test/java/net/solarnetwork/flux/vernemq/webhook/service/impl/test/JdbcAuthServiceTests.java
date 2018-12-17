@@ -19,18 +19,29 @@ package net.solarnetwork.flux.vernemq.webhook.service.impl.test;
 
 import static org.hamcrest.Matchers.equalTo;
 import static org.junit.Assert.assertThat;
+import static org.mockito.BDDMockito.given;
+import static org.mockito.BDDMockito.then;
+import static org.mockito.Matchers.any;
+
+import java.util.Arrays;
+import java.util.List;
 
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.mockito.Mock;
+import org.mockito.Mockito;
 import org.mockito.runners.MockitoJUnitRunner;
 import org.springframework.jdbc.core.JdbcOperations;
+import org.springframework.jdbc.core.PreparedStatementCreator;
 
+import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
+import net.solarnetwork.flux.vernemq.webhook.domain.ActorDetails;
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
 import net.solarnetwork.flux.vernemq.webhook.domain.ResponseStatus;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
+import net.solarnetwork.flux.vernemq.webhook.service.impl.ActorDetailsRowMapper;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
 import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
 
@@ -187,6 +198,41 @@ public class JdbcAuthServiceTests extends TestSupport {
 
     // then
     assertThat("Next", r.getStatus(), equalTo(ResponseStatus.NEXT));
+  }
+
+  @Test
+  public void authenticateNodeIpMaskAllowed() {
+    // given
+    authService.setIpMask("128.0.0.4/31");
+    RegisterRequest req = RegisterRequest.builder().withUsername("solarnode").withClientId("2")
+        .withPeerAddress("128.0.0.5").build();
+
+    List<Actor> actors = Arrays.asList(new ActorDetails(123L, 2L));
+    given(jdbcOps.query(Mockito.any(PreparedStatementCreator.class),
+        Mockito.any(ActorDetailsRowMapper.class))).willReturn(actors);
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Next", r.getStatus(), equalTo(ResponseStatus.OK));
+  }
+
+  @Test
+  public void authenticateNodeIpMaskDenied() {
+    // given
+    authService.setIpMask("128.0.0.4/31");
+    RegisterRequest req = RegisterRequest.builder().withUsername("solarnode")
+        .withPeerAddress("10.0.0.1").build();
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Next", r.getStatus(), equalTo(ResponseStatus.NEXT));
+
+    then(jdbcOps).should(Mockito.never()).query(any(PreparedStatementCreator.class),
+        any(ActorDetailsRowMapper.class));
   }
 
 }

@@ -20,13 +20,22 @@ package net.solarnetwork.flux.vernemq.webhook.domain.v311;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
+import net.solarnetwork.flux.vernemq.webhook.domain.AuthRequest;
+
 /**
  * A register or auth-register request model.
  * 
  * @author matt
  */
 @JsonDeserialize(builder = RegisterRequest.Builder.class)
-public class RegisterRequest {
+public class RegisterRequest implements AuthRequest {
+
+  @JsonProperty("client_id")
+  private final String clientId;
+
+  private final String mountpoint;
+
+  private final String username;
 
   @JsonProperty("peer_addr")
   private final String peerAddress;
@@ -34,12 +43,7 @@ public class RegisterRequest {
   @JsonProperty("peer_port")
   private final Integer peerPort;
 
-  private final String username;
   private final String password;
-  private final String mountpoint;
-
-  @JsonProperty("client_id")
-  private final String clientId;
 
   @JsonProperty("clean_session")
   private final Boolean cleanSession;
@@ -155,6 +159,7 @@ public class RegisterRequest {
     return peerPort;
   }
 
+  @Override
   public String getUsername() {
     return username;
   }
@@ -163,10 +168,12 @@ public class RegisterRequest {
     return password;
   }
 
+  @Override
   public String getMountpoint() {
     return mountpoint;
   }
 
+  @Override
   public String getClientId() {
     return clientId;
   }

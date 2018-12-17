@@ -17,12 +17,15 @@
 
 package net.solarnetwork.flux.vernemq.webhook.web;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
+import net.solarnetwork.central.support.JsonUtils;
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
@@ -40,6 +43,8 @@ public class AuthHooksController {
 
   private final AuthService authService;
 
+  private static final Logger log = LoggerFactory.getLogger(AuthHooksController.class);
+
   @Autowired
   public AuthHooksController(AuthService authService) {
     super();
@@ -53,6 +58,9 @@ public class AuthHooksController {
    */
   @RequestMapping(value = "", headers = "vernemq-hook=auth_on_register")
   public Response authOnRegister(@RequestBody RegisterRequest request) {
+    if (log.isTraceEnabled()) {
+      log.trace("Register request: {}", JsonUtils.getJSONString(request, null));
+    }
     return authService.authenticateRequest(request);
   }
 

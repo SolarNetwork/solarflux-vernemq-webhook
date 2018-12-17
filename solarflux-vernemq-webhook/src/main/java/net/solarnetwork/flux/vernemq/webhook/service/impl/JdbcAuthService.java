@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 
+import com.github.veqryn.net.Cidr4;
+
 import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
 import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
@@ -132,6 +134,7 @@ public class JdbcAuthService implements AuthService {
   private boolean forceCleanSession = false;
   private String publishUsername = DEFAULT_PUBLISH_USERNAME;
   private Cache<String, Actor> actorCache;
+  private Cidr4 ipMask = null;
 
   /**
    * Constructor.
@@ -147,7 +150,28 @@ public class JdbcAuthService implements AuthService {
     this.authEvaluator = authEvaluator;
   }
 
+  private boolean isPeerAddressValid(RegisterRequest request) {
+    if (ipMask == null) {
+      return true;
+    }
+    String peerAddress = request.getPeerAddress();
+    if (peerAddress == null) {
+      return false;
+    }
+    try {
+      return ipMask.isInRange(peerAddress, true);
+    } catch (IllegalArgumentException e) {
+      return false;
+    }
+  }
+
   private Response authorizeNodeRequest(RegisterRequest request) {
+    if (!isPeerAddressValid(request)) {
+      AUDIT_LOG.info("Access denied to node: peer address {} not allowed",
+          request.getPeerAddress());
+      return new Response(ResponseStatus.NEXT);
+    }
+
     Long nodeId;
     try {
       nodeId = Long.valueOf(request.getClientId());
@@ -691,6 +715,39 @@ public class JdbcAuthService implements AuthService {
    */
   public void setActorCache(Cache<String, Actor> actorCache) {
     this.actorCache = actorCache;
+  }
+
+  /**
+   * Get the IP address mask for node authentication.
+   * 
+   * <p>
+   * This is provided in CIDR format, e.g. {@literal 192.168.0.0/24}.
+   * </p>
+   * 
+   * @return
+   */
+  public String getIpMask() {
+    return (ipMask != null ? ipMask.getCidrSignature() : null);
+  }
+
+  /**
+   * Set the IP address mask for node authentication.
+   * 
+   * <p>
+   * If configured, then for node authentication requests the
+   * {@link RegisterRequest#getPeerAddress()} will be compared to this CIDR range, and if it falls
+   * outside {@code ipMask} the request will fail. This is only used for node authentication because
+   * node authentication is actually only authorization, with the assumption that actual
+   * authentication has been performed externally, for example with an X.509 certificate.
+   * </p>
+   * 
+   * @param ipMask
+   *        an IP address range to limit requests to, in CIDR format, e.g. {@literal 192.168.0.0/24}
+   * @throws IllegalArgumentException
+   *         if the IP mask cannot be parsed
+   */
+  public void setIpMask(String ipMask) {
+    this.ipMask = (ipMask != null ? new Cidr4(ipMask) : null);
   }
 
 }
