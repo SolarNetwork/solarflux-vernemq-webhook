@@ -22,6 +22,8 @@ import java.util.List;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
+import net.solarnetwork.util.StringUtils;
+
 /**
  * A list of topics, implementing {@link ResponseTopics}.
  * 
@@ -41,6 +43,11 @@ public class TopicList implements ResponseTopics {
   public TopicList(List<String> topics) {
     super();
     this.topics = topics;
+  }
+
+  @Override
+  public String toString() {
+    return (topics != null ? StringUtils.commaDelimitedStringFromCollection(topics) : "<<empty>>");
   }
 
   @JsonValue

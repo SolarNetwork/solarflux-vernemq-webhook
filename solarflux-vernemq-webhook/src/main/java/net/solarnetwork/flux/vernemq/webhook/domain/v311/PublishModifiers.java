@@ -17,6 +17,8 @@
 
 package net.solarnetwork.flux.vernemq.webhook.domain.v311;
 
+import java.util.Arrays;
+
 import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.Message;
@@ -92,6 +94,14 @@ public class PublishModifiers implements ResponseModifiers, Message {
     public PublishModifiers build() {
       return new PublishModifiers(this);
     }
+  }
+
+  @Override
+  public String toString() {
+    return "PublishModifiers{" + (topic != null ? "topic=" + topic + ", " : "")
+        + (qos != null ? "qos=" + qos + ", " : "")
+        + (payload != null ? "payload=" + Arrays.toString(payload) + ", " : "")
+        + (retain != null ? "retain=" + retain : "") + "}";
   }
 
   @Override
