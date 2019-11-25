@@ -21,6 +21,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.SimpleAuthorizationEvaluator;
 
@@ -36,6 +37,9 @@ public class AuthConfig {
   @Value("${auth.userTopicPrefixEnabled:true}")
   private boolean userTopicPrefix = true;
 
+  @Value("${mqtt.maxQos:1}")
+  private int maxQos = Qos.AtLeastOnce.getKey();
+
   /**
    * The {@link AuthorizationEvaluator}.
    * 
@@ -45,6 +49,7 @@ public class AuthConfig {
   public SimpleAuthorizationEvaluator authorizationEvaluator() {
     SimpleAuthorizationEvaluator ae = new SimpleAuthorizationEvaluator();
     ae.setUserTopicPrefix(userTopicPrefix);
+    ae.setMaxQos(Qos.forKey(maxQos));
     return ae;
   }
 

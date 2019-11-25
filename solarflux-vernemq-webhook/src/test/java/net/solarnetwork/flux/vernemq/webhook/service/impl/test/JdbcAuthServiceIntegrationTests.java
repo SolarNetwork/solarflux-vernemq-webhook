@@ -102,7 +102,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
         DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
     final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
 
-    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+    RegisterRequest req = RegisterRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withPassword(
             password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
         .build();
@@ -126,7 +126,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
         DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
     final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
 
-    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+    RegisterRequest req = RegisterRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withPassword(
             password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
         .build();
@@ -153,7 +153,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
         DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
     final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
 
-    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+    RegisterRequest req = RegisterRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withPassword(
             password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
         .withCleanSession(false).build();
@@ -180,7 +180,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
         DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
     final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
 
-    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+    RegisterRequest req = RegisterRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withPassword(
             password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
         .withCleanSession(true).build();
@@ -196,6 +196,80 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
   }
 
   @Test
+  public void authenticateOkWithClientIdSameAsUsernameAsPrefix() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+    final String tokenId = "test.token";
+    final String tokenSecret = "foobar";
+    DbUtils.createToken(jdbcOps, tokenId, tokenSecret, userId, true,
+        DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
+    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
+
+    RegisterRequest req = RegisterRequest.builder().withClientId(tokenId + "-and-suffix")
+        .withUsername(tokenId)
+        .withPassword(
+            password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
+        .build();
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("No modifiers", r.getModifiers(), nullValue());
+  }
+
+  @Test
+  public void authenticateFailedWithoutClientIdSameAsUsername() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+    final String tokenId = "test.token";
+    final String tokenSecret = "foobar";
+    DbUtils.createToken(jdbcOps, tokenId, tokenSecret, userId, true,
+        DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
+    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
+
+    RegisterRequest req = RegisterRequest.builder().withClientId("not same").withUsername(tokenId)
+        .withPassword(
+            password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
+        .build();
+
+    // when
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.NEXT));
+    assertThat("No modifiers", r.getModifiers(), nullValue());
+  }
+
+  @Test
+  public void authenticateOkClientIdSameAsUsernameDisabledButDifferent() {
+    // given
+    final Long userId = 123L;
+    DbUtils.createUser(jdbcOps, userId);
+    final String tokenId = "test.token";
+    final String tokenSecret = "foobar";
+    DbUtils.createToken(jdbcOps, tokenId, tokenSecret, userId, true,
+        DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
+    final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
+
+    RegisterRequest req = RegisterRequest.builder().withClientId("not same").withUsername(tokenId)
+        .withPassword(
+            password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
+        .build();
+
+    // when
+    authService.setRequireTokenClientIdPrefix(false);
+    Response r = authService.authenticateRequest(req);
+
+    // then
+    assertThat("Result", r.getStatus(), equalTo(ResponseStatus.OK));
+    assertThat("No modifiers", r.getModifiers(), nullValue());
+  }
+
+  @Test
   public void authenticateFailedDateSkewTooLarge() {
     // given
     final Long userId = 123L;
@@ -206,7 +280,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
         DbUtils.READ_NODE_DATA_TOKEN_TYPE, null);
     final long reqDate = new DateTime(2018, 12, 10, 11, 34, DateTimeZone.UTC).getMillis() / 1000L;
 
-    RegisterRequest req = RegisterRequest.builder().withUsername(tokenId)
+    RegisterRequest req = RegisterRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withPassword(
             password(reqDate, "924e73bef6f4a10d0c477ee2205a9dc3709967fb9627617fc8565de50507e41b"))
         .build();
@@ -303,7 +377,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     // given
     final String tokenId = UUID.randomUUID().toString();
 
-    SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
+    SubscribeRequest req = SubscribeRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withTopics(topics("node/1/datum/0/foo")).build();
 
     // when
@@ -324,7 +398,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
 
     final String tokenId = createReadToken(userId, "secret", null);
 
-    SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
+    SubscribeRequest req = SubscribeRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withTopics(topics("node/1/datum/0/foo")).build();
 
     // when
@@ -352,7 +426,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final SecurityPolicy policy = policyForNodesAndSources(new Long[] { nodeId }, "/foo", "/bar");
     final String tokenId = createReadToken(userId, "secret", policy);
 
-    SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
+    SubscribeRequest req = SubscribeRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withTopics(topics("node/1/datum/0/foo", "node/1/datum/0/bar")).build();
 
     // when
@@ -375,7 +449,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final SecurityPolicy policy = policyForNodesAndSources(new Long[] { 1L, 2L }, "/foo");
     final String tokenId = createReadToken(userId, "secret", policy);
 
-    SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
+    SubscribeRequest req = SubscribeRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withTopics(topics("node/2/datum/0/foo")).build();
 
     // when
@@ -409,7 +483,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     final SecurityPolicy policy = policyForNodesAndSources(new Long[] { nodeId }, "/foo");
     final String tokenId = createReadToken(userId, "secret", policy);
 
-    SubscribeRequest req = SubscribeRequest.builder().withUsername(tokenId)
+    SubscribeRequest req = SubscribeRequest.builder().withClientId(tokenId).withUsername(tokenId)
         .withTopics(topics("node/1/datum/0/foo", "node/1/datum/0/bar")).build();
 
     // when

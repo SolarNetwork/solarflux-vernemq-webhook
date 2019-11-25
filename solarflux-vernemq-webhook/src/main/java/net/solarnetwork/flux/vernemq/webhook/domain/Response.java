@@ -112,6 +112,14 @@ public class Response {
     this.topics = topics;
   }
 
+  @Override
+  public String toString() {
+    return "Response{" + (status != null ? "status=" + status + ", " : "")
+        + (errorStatus != null ? "errorStatus=" + errorStatus + ", " : "")
+        + (modifiers != null ? "modifiers=" + modifiers + ", " : "")
+        + (topics != null ? "topics=" + topics : "") + "}";
+  }
+
   @JsonProperty(value = "result")
   public Object getResult() {
     return errorStatus != null ? errorStatus : status;

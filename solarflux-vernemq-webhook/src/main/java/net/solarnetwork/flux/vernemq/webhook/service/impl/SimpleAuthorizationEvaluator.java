@@ -77,6 +77,7 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
 
   private Pattern nodeDatumTopicRegex = Pattern.compile(DEFAULT_NODE_DATUM_TOPIC_REGEX);
   private boolean userTopicPrefix = false;
+  private Qos maxQos = null;
 
   @Override
   public Message evaluatePublish(Actor actor, Message message) {
@@ -91,6 +92,9 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
     }
 
     Qos qos = message.getQos();
+    if (maxQos != null && qos.getKey() > maxQos.getKey()) {
+      qos = maxQos;
+    }
     Matcher m = nodeDatumTopicRegex.matcher(topic);
     if (!m.matches()) {
       AUDIT_LOG.info("Topic [{}] access denied to {}: invalid topic pattern", topic, actor);
@@ -140,6 +144,9 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
     for (TopicSubscriptionSetting s : req) {
       String topic = s.getTopic();
       Qos qos = s.getQos();
+      if (maxQos != null && qos.getKey() > maxQos.getKey()) {
+        qos = maxQos;
+      }
       Matcher m = nodeDatumTopicRegex.matcher(topic);
       if (!m.matches()) {
         AUDIT_LOG.info("Topic [{}] access denied to {}: invalid topic pattern", topic, actor);
@@ -329,6 +336,30 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
    */
   public void setUserTopicPrefix(boolean userTopicPrefix) {
     this.userTopicPrefix = userTopicPrefix;
+  }
+
+  /**
+   * Get the maximum MQTT Qos setting.
+   * 
+   * @return a maximum Qos to enforce, or {@literal null} for no limit; defaults to {@literal null}
+   */
+  public Qos getMaxQos() {
+    return maxQos;
+  }
+
+  /**
+   * Set a maximum MQTT Qos setting.
+   * 
+   * <p>
+   * If configured, then publish/subscribe actions with a Qos higher than this will be downgraded to
+   * this value.
+   * </p>
+   * 
+   * @param maxQos
+   *        the maximum Qos, or {@literal null} for no limit
+   */
+  public void setMaxQos(Qos maxQos) {
+    this.maxQos = maxQos;
   }
 
 }

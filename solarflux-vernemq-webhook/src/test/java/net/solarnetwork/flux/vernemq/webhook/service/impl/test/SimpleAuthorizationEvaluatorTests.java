@@ -121,6 +121,22 @@ public class SimpleAuthorizationEvaluatorTests {
   }
 
   @Test
+  public void subscribeNoPolicyAllowedNodeQosDowngraded() {
+    ActorDetails actor = actor(null, 2L);
+    TopicSettings request = requestForTopics("node/2/datum/0/foo");
+    service.setMaxQos(Qos.AtMostOnce);
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic allowed via ownership", result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/0/foo"))
+            .withProperty("qos", equalTo(Qos.AtMostOnce)));
+    // @formatter:on
+  }
+
+  @Test
   public void subscribeNoPolicyDeniedNode() {
     ActorDetails actor = actor(null, 2L);
     TopicSettings request = requestForTopics("node/3/datum/0/foo");
@@ -943,6 +959,22 @@ public class SimpleAuthorizationEvaluatorTests {
     Message request = requestMessage("node/2/datum/0/foo");
     Message result = service.evaluatePublish(actor, request);
     assertThat("Result Ok", result, sameInstance(request));
+  }
+
+  @Test
+  public void publishAllowedQosDowngrade() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("node/2/datum/0/foo");
+    service.setMaxQos(Qos.AtMostOnce);
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result Ok", result, allOf(notNullValue(), not(sameInstance(request))));
+    // @formatter:off
+    assertThat("Topic allowed and downgraded Qos",
+        result,
+        pojo(Message.class)
+            .withProperty("topic", equalTo("node/2/datum/0/foo"))
+            .withProperty("qos", equalTo(Qos.AtMostOnce)));
+    // @formatter:on
   }
 
   @Test

@@ -39,7 +39,7 @@ In this scenario, the following MQTT credentials are required:
 
 | Property | Description |
 |----------|-------------|
-| Client ID | This can be anything, and is not used for authentication. |
+| Client ID | If `auth.requireTokenClientIdPrefix` is `true` then this must start with the token ID, followed by anything unique. The MQTT spec limits the client ID to 23 characters, but SolarFlux servers might allow longer names. |
 | Username | A SolarNetwork security token ID. |
 | Password | A [SolarNetwork V2][sn-auth-v2] signature, extended with a `Date=D` attribute. |
 
@@ -109,7 +109,7 @@ Details on how to deploy a TLS proxy server is outside the scope of this documen
 
 Gradle is used for building. Run the `build` task via `gradlew`:
 
-	$ ../gradlew build
+	$ ./gradlew build
 
 The finished WAR file will be `build/libs/solarflux-vernemq-webook-X.war` where `X` is the
 version number.
@@ -184,12 +184,14 @@ included in the app.
 | Property | Default | Description |
 |----------|---------|-------------|
 | `auth.nodeIpMask` |  | An IP address range in CIDR format to limit node-based authentication to, for example `192.168.0.0/24`. |
+| `auth.requireTokenClientIdPrefix` | `true` | If true, for token authentication the MQTT client ID must start with the token ID. |
 | `auth.userTopicPrefixEnabled` | `true` | If true, topics will be re-written to include a `user/X` prefix, where `X` is the ID of the authenticated user. |
-| `cache.actor.ttl` | 900 | The maximum length of time to cache user details, in seconds. |
+| `cache.actor.ttl` | `900` | The maximum length of time to cache user details, in seconds. |
 | `mqtt.forceCleanSession` | `true` | If `true` then force the MQTT _clean session_ connection flag to `true`, which prevents session persistence. |
+| `mqtt.maxQos` | `1` | The maximum MQTT Qos value to enforce for publish/subscribe. |
 | `solarnewtork.api.authPath` | `/solarflux/auth` | For token authentication, the URL path to use. |
 | `solarnetwork.api.host` | `data.solarnetwork.net` | For token authentication, the hostname to use. |
-| `solarnetwork.api.maxDateSkew` | 900000 | For token authentication, the maximum date skew to use, in milliseconds. |
+| `solarnetwork.api.maxDateSkew` | `900000` | For token authentication, the maximum date skew to use, in milliseconds. |
 
 ### Database connection properties
 

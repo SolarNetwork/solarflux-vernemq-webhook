@@ -56,6 +56,9 @@ public class JdbcConfiguration {
   @Value("${auth.nodeIpMask:#{null}}")
   private String nodeIpMask = null;
 
+  @Value("${auth.requireTokenClientIdPrefix:true}")
+  private boolean requireTokenClientIdPrefix = true;
+
   @Autowired
   public DataSource dataSource;
 
@@ -81,6 +84,7 @@ public class JdbcConfiguration {
     service.setForceCleanSession(forceCleanSession);
     service.setActorCache(actorCache);
     service.setIpMask(nodeIpMask);
+    service.setRequireTokenClientIdPrefix(requireTokenClientIdPrefix);
     return service;
   }
 

@@ -135,6 +135,19 @@ public class RegisterModifiers implements ResponseModifiers {
     }
   }
 
+  @Override
+  public String toString() {
+    return "RegisterModifiers{"
+        + (subscriberId != null ? "subscriberId=" + subscriberId + ", " : "")
+        + (regView != null ? "regView=" + regView + ", " : "")
+        + (cleanSession != null ? "cleanSession=" + cleanSession + ", " : "")
+        + (maxMessageSize != null ? "maxMessageSize=" + maxMessageSize + ", " : "")
+        + (maxMessageRate != null ? "maxMessageRate=" + maxMessageRate + ", " : "")
+        + (maxInflightMessages != null ? "maxInflightMessages=" + maxInflightMessages + ", " : "")
+        + (retryInterval != null ? "retryInterval=" + retryInterval + ", " : "")
+        + (upgradeQos != null ? "upgradeQos=" + upgradeQos : "") + "}";
+  }
+
   public String getSubscriberId() {
     return subscriberId;
   }

@@ -82,7 +82,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticateUsernameEmpty() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("").build();
+    RegisterRequest req = RegisterRequest.builder().withClientId("").withUsername("").build();
 
     // when
     Response r = authService.authenticateRequest(req);
@@ -94,7 +94,8 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticatePasswordMissing() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("token").build();
+    RegisterRequest req = RegisterRequest.builder().withClientId("token").withUsername("token")
+        .build();
 
     // when
     Response r = authService.authenticateRequest(req);
@@ -106,7 +107,8 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticatePasswordEmpty() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("token").withPassword("").build();
+    RegisterRequest req = RegisterRequest.builder().withClientId("token").withUsername("token")
+        .withPassword("").build();
 
     // when
     Response r = authService.authenticateRequest(req);
@@ -118,7 +120,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticatePasswordMalformedTokens() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("token")
+    RegisterRequest req = RegisterRequest.builder().withClientId("token").withUsername("token")
         .withPassword("not a password").build();
 
     // when
@@ -136,7 +138,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticatePasswordRequestDateMissing() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("token")
+    RegisterRequest req = RegisterRequest.builder().withClientId("token").withUsername("token")
         .withPassword("Signature=010203").build();
 
     // when
@@ -149,7 +151,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticatePasswordRequestDateEmpty() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("token")
+    RegisterRequest req = RegisterRequest.builder().withClientId("token").withUsername("token")
         .withPassword("Date=,Signature=010203").build();
 
     // when
@@ -163,7 +165,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticatePasswordRequestDateMalformed() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("token")
+    RegisterRequest req = RegisterRequest.builder().withClientId("token").withUsername("token")
         .withPassword("Date=foo,Signature=010203").build();
 
     // when
@@ -177,8 +179,8 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticatePasswordSignatureMissing() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("token").withPassword("Date=123")
-        .build();
+    RegisterRequest req = RegisterRequest.builder().withClientId("token").withUsername("token")
+        .withPassword("Date=123").build();
 
     // when
     Response r = authService.authenticateRequest(req);
@@ -190,7 +192,7 @@ public class JdbcAuthServiceTests extends TestSupport {
   @Test
   public void authenticatePasswordSignatureEmpty() {
     // given
-    RegisterRequest req = RegisterRequest.builder().withUsername("token")
+    RegisterRequest req = RegisterRequest.builder().withClientId("token").withUsername("token")
         .withPassword(password(123L, "")).build();
 
     // when

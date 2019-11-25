@@ -135,6 +135,7 @@ public class JdbcAuthService implements AuthService {
   private String publishUsername = DEFAULT_PUBLISH_USERNAME;
   private Cache<String, Actor> actorCache;
   private Cidr4 ipMask = null;
+  private boolean requireTokenClientIdPrefix = true;
 
   /**
    * Constructor.
@@ -163,6 +164,22 @@ public class JdbcAuthService implements AuthService {
     } catch (IllegalArgumentException e) {
       return false;
     }
+  }
+
+  private boolean isClientIdValidForTokenAuthentication(RegisterRequest request) {
+    if (!requireTokenClientIdPrefix) {
+      // don't care
+      return true;
+    }
+    if (request == null) {
+      return false;
+    }
+    String tokenId = request.getUsername();
+    String clientId = request.getClientId();
+    if (tokenId == null || tokenId.isEmpty() || clientId == null || clientId.isEmpty()) {
+      return false;
+    }
+    return clientId.startsWith(tokenId);
   }
 
   private Response authorizeNodeRequest(RegisterRequest request) {
@@ -208,6 +225,11 @@ public class JdbcAuthService implements AuthService {
     }
 
     final String tokenId = username;
+    if (!isClientIdValidForTokenAuthentication(request)) {
+      AUDIT_LOG.info("Access denied to [{}]: invlalid client ID [{}]", tokenId,
+          request.getClientId());
+      return new Response(ResponseStatus.NEXT);
+    }
 
     final Map<String, String> pwTokens = delimitedStringToMap(request.getPassword(), ",", "=");
     if (pwTokens == null || !(pwTokens.containsKey(DATE_PASSWORD_TOKEN)
@@ -263,7 +285,8 @@ public class JdbcAuthService implements AuthService {
     }
 
     // request is authenticated
-    AUDIT_LOG.info("Authenticated [{}] @ {}{}", tokenId, snHost, snPath);
+    AUDIT_LOG.info("Authenticated [{}] client [{}] @ {}{}", tokenId, request.getClientId(), snHost,
+        snPath);
     if (forceCleanSession
         && (request.getCleanSession() == null || !request.getCleanSession().booleanValue())) {
       return new Response(RegisterModifiers.builder().withCleanSession(true).build());
@@ -748,6 +771,26 @@ public class JdbcAuthService implements AuthService {
    */
   public void setIpMask(String ipMask) {
     this.ipMask = (ipMask != null ? new Cidr4(ipMask) : null);
+  }
+
+  /**
+   * Get the token client ID prefix requirement setting.
+   * 
+   * @return the setting; default to {@literal true}
+   */
+  public boolean isRequireTokenClientIdPrefix() {
+    return requireTokenClientIdPrefix;
+  }
+
+  /**
+   * Toggle the token client ID prefix requirement.
+   * 
+   * @param requireTokenClientIdPrefix
+   *        {@literal true} to force token-based authentication to require that the MQTT client ID
+   *        starts with the token ID
+   */
+  public void setRequireTokenClientIdPrefix(boolean requireTokenClientIdPrefix) {
+    this.requireTokenClientIdPrefix = requireTokenClientIdPrefix;
   }
 
 }
