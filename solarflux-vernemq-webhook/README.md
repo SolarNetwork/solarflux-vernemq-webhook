@@ -109,7 +109,7 @@ Details on how to deploy a TLS proxy server is outside the scope of this documen
 
 Gradle is used for building. Run the `build` task via `gradlew`:
 
-	$ ../gradlew build
+	$ ./gradlew build
 
 The finished WAR file will be `build/libs/solarflux-vernemq-webook-X.war` where `X` is the
 version number.
