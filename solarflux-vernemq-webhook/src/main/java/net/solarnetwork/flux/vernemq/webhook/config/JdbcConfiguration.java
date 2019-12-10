@@ -36,7 +36,7 @@ import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
  * Configuration for JDBC based services.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 @Configuration
 public class JdbcConfiguration {
@@ -58,6 +58,9 @@ public class JdbcConfiguration {
 
   @Value("${auth.requireTokenClientIdPrefix:true}")
   private boolean requireTokenClientIdPrefix = true;
+
+  @Value("${auth.allowDirectTokenAuthentication:true}")
+  private boolean allowDirectTokenAuthentication = true;
 
   @Autowired
   public DataSource dataSource;
@@ -85,6 +88,7 @@ public class JdbcConfiguration {
     service.setActorCache(actorCache);
     service.setIpMask(nodeIpMask);
     service.setRequireTokenClientIdPrefix(requireTokenClientIdPrefix);
+    service.setAllowDirectTokenAuthentication(allowDirectTokenAuthentication);
     return service;
   }
 

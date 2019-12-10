@@ -74,10 +74,10 @@ import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
 public class JdbcAuthServiceIntegrationTests extends TestSupport {
 
   @Autowired
-  private DataSource dataSource;
+  protected DataSource dataSource;
 
-  private JdbcOperations jdbcOps;
-  private JdbcAuthService authService;
+  protected JdbcOperations jdbcOps;
+  protected JdbcAuthService authService;
 
   @Before
   public void setup() {

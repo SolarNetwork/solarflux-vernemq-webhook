@@ -26,8 +26,11 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.time.Instant;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.regex.Pattern;
 
 import javax.cache.Cache;
 
@@ -50,6 +53,8 @@ import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
+import net.solarnetwork.web.security.AuthenticationUtils;
+import net.solarnetwork.web.security.AuthorizationV2Builder;
 
 /**
  * {@link AuthService} implementation that uses JDBC to authenticate and authorize requests.
@@ -61,7 +66,7 @@ import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
  * </p>
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class JdbcAuthService implements AuthService {
 
@@ -121,10 +126,23 @@ public class JdbcAuthService implements AuthService {
    */
   public static final String DEFAULT_PUBLISH_USERNAME = "solarnode";
 
+  /**
+   * The default value for the {@code directTokenSecretRegex} property.
+   * 
+   * <p>
+   * This pattern matches the RFC 1924 alphabet used by SolarNetwork when generating tokens.
+   * </p>
+   * 
+   * @since 1.1
+   */
+  public static final Pattern DEFAULT_DIRECT_TOKEN_SECRET_REGEX = Pattern
+      .compile("[0-9A-Za-z!#$%&()*+;<=>?@^_`{|}~-]{16,}");
+
   private static final Logger log = LoggerFactory.getLogger(JdbcAuthService.class);
 
   private final JdbcOperations jdbcOps;
   private final AuthorizationEvaluator authEvaluator;
+  private final Pattern directTokenSecretRegex;
   private String authenticateCall = DEFAULT_AUTHENTICATE_CALL;
   private String authorizeNodeCall = DEFAULT_AUTHORIZE_NODE_CALL;
   private String authorizeCall = DEFAULT_AUTHORIZE_CALL;
@@ -136,6 +154,7 @@ public class JdbcAuthService implements AuthService {
   private Cache<String, Actor> actorCache;
   private Cidr4 ipMask = null;
   private boolean requireTokenClientIdPrefix = true;
+  private boolean allowDirectTokenAuthentication = false;
 
   /**
    * Constructor.
@@ -146,9 +165,26 @@ public class JdbcAuthService implements AuthService {
    *        the authorization evaluator to use
    */
   public JdbcAuthService(JdbcOperations jdbcOps, AuthorizationEvaluator authEvaluator) {
+    this(jdbcOps, authEvaluator, DEFAULT_DIRECT_TOKEN_SECRET_REGEX);
+  }
+
+  /**
+   * Constructor.
+   * 
+   * @param jdbcOps
+   *        the JDBC API
+   * @param authEvaluator
+   *        the authorization evaluator to use
+   * @param directTokenSecretRegex
+   *        the regular expression that matches direct token secrets
+   */
+  public JdbcAuthService(JdbcOperations jdbcOps, AuthorizationEvaluator authEvaluator,
+      Pattern directTokenSecretRegex) {
     super();
+    assert jdbcOps != null && authEvaluator != null && directTokenSecretRegex != null;
     this.jdbcOps = jdbcOps;
     this.authEvaluator = authEvaluator;
+    this.directTokenSecretRegex = directTokenSecretRegex;
   }
 
   private boolean isPeerAddressValid(RegisterRequest request) {
@@ -231,7 +267,13 @@ public class JdbcAuthService implements AuthService {
       return new Response(ResponseStatus.NEXT);
     }
 
-    final Map<String, String> pwTokens = delimitedStringToMap(request.getPassword(), ",", "=");
+    final Map<String, String> pwTokens;
+    if (allowDirectTokenAuthentication && request.getPassword() != null
+        && directTokenSecretRegex.matcher(request.getPassword()).matches()) {
+      pwTokens = signTokenCredentials(tokenId, request.getPassword());
+    } else {
+      pwTokens = delimitedStringToMap(request.getPassword(), ",", "=");
+    }
     if (pwTokens == null || !(pwTokens.containsKey(DATE_PASSWORD_TOKEN)
         && pwTokens.containsKey(SIGNATURE_PASSWORD_TOKEN))) {
       return new Response(ResponseStatus.NEXT);
@@ -258,7 +300,7 @@ public class JdbcAuthService implements AuthService {
     }
 
     log.debug("Authenticating [{}] @ {}{} with [{}]", tokenId, snHost, snPath,
-        request.getPassword());
+        pwTokens.get(SIGNATURE_PASSWORD_TOKEN));
     List<SnTokenDetails> results = jdbcOps.query(new PreparedStatementCreator() {
 
       @Override
@@ -292,6 +334,17 @@ public class JdbcAuthService implements AuthService {
       return new Response(RegisterModifiers.builder().withCleanSession(true).build());
     }
     return new Response();
+  }
+
+  private Map<String, String> signTokenCredentials(final String tokenId, final String tokenSecret) {
+    final Instant now = Instant.now();
+    final Date date = new Date(now.getEpochSecond() * 1000);
+    final String sig = new AuthorizationV2Builder(tokenId).date(date)
+        .header("X-SN-Date", AuthenticationUtils.httpDate(date)).host(snHost).path(snPath)
+        .build(tokenSecret);
+    final Map<String, String> result = delimitedStringToMap(sig, ",", "=");
+    result.put(DATE_PASSWORD_TOKEN, Long.toString(now.getEpochSecond()));
+    return result;
   }
 
   private Actor actorForTokenId(String tokenId) {
@@ -791,6 +844,33 @@ public class JdbcAuthService implements AuthService {
    */
   public void setRequireTokenClientIdPrefix(boolean requireTokenClientIdPrefix) {
     this.requireTokenClientIdPrefix = requireTokenClientIdPrefix;
+  }
+
+  /**
+   * Get the direct token authentication permission flag.
+   * 
+   * @return {@literal true} if direct token secrets can be passed for token credentials; defaults
+   *         to {@literal false}
+   */
+  public boolean isAllowDirectTokenAuthentication() {
+    return allowDirectTokenAuthentication;
+  }
+
+  /**
+   * Set the direct token authentication permission flag.
+   * 
+   * <p>
+   * Enabling this setting means that un-hashed raw token secrets can be used for the password in
+   * token-based credentials. If a raw token secret is detected, this service will calculate the
+   * token signature itself during the authentication process.
+   * </p>
+   * 
+   * @param allowDirectTokenAuthentication
+   *        {@literal true} to allow token secrets can be passed for token credentials,
+   *        {@literal false} to required pre-signed signatures
+   */
+  public void setAllowDirectTokenAuthentication(boolean allowDirectTokenAuthentication) {
+    this.allowDirectTokenAuthentication = allowDirectTokenAuthentication;
   }
 
 }
