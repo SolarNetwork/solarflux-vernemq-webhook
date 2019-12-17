@@ -667,6 +667,23 @@ public class SimpleAuthorizationEvaluatorTests {
   }
 
   @Test
+  public void subscribeWithPolicyWithSourcePrefixedPathWildPatternAllowed() {
+    SecurityPolicy policy = policyForSources("/foo/**");
+    ActorDetails actor = actor(policy, 2L, 3L);
+    TopicSettings request = requestForTopics("node/2/datum/0/foo/#");
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic allowed with source path wildcard",
+        result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("node/2/datum/0/foo/#"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)));
+    // @formatter:on
+  }
+
+  @Test
   public void subscribeWithPolicyWithSourcePrefixedPathPatternDenied() {
     SecurityPolicy policy = policyForSources("/foo/**");
     ActorDetails actor = actor(policy, 2L, 3L);

@@ -25,15 +25,31 @@ user/234/node/2/datum/0/Building1/Room1/Light1
 user/234/node/2/datum/0/Building1/Room1/Light2
 ```
 
-Two styles of authentication are performed, as outlined below.
+Three styles of authentication are supported, as outlined below.
 
+## SolarNework token authentication
 
-### SolarNework token authentication
+This style of authentication is designed to be used by arbitrary MQTT client applications that want
+to subscribe to topics and have access to a token and corresponding token secret. Authorization to
+MQTT topics is controlled by the Security Policy attached to the token used for authentication: only
+the nodes, sources, and aggregation levels authorized by the Security Policy are allowed.
 
-This style of authentication is designed to be used by arbitrary MQTT client applications
-that want to subscribe to topics. Authorization to MQTT topics is controlled by the Security
-Policy attached to the token used for authentication: only the nodes, sources, and aggregation
-levels authorized by the Security Policy are allowed.
+In this scenario, the following MQTT credentials are required:
+
+| Property | Description |
+|----------|-------------|
+| Client ID | If `auth.requireTokenClientIdPrefix` is `true` then this must start with the token ID, followed by anything unique. The MQTT spec limits the client ID to 23 characters, but SolarFlux servers might allow longer names. |
+| Username | A SolarNetwork security token ID. |
+| Password | A SolarNetwork security token secret. |
+
+## SolarNework signed token digest authentication
+
+This style of authentication is designed to be used by arbitrary MQTT client applications that want
+to subscribe to topics, without necessarily having direct access to a token secret. It can be useful
+to provide either pre-signed token digests or a signing key to a client application, so the actual
+token secret is not exposed to the client. Authorization to MQTT topics is controlled by the
+Security Policy attached to the token used for authentication: only the nodes, sources, and
+aggregation levels authorized by the Security Policy are allowed.
 
 In this scenario, the following MQTT credentials are required:
 
@@ -79,7 +95,7 @@ Date=1545069502,Signature=4d56e33d69300c163f414ee688e9771eabce45d5a425e480a8cc60
 ```
 
 
-### SolarNode authentication
+## SolarNode authentication
 
 This style of authentication is designed to be used by SolarNode devices posting data to SolarFlux.
 In this scenario, this application does not perform authentication. Instead it assumes the SolarNode
@@ -105,7 +121,7 @@ specified in the Client ID, e.g.  `node/N/datum/0/S`.
 Details on how to deploy a TLS proxy server is outside the scope of this document.
 
 
-## Building
+# Building
 
 Gradle is used for building. Run the `build` task via `gradlew`:
 
@@ -115,7 +131,7 @@ The finished WAR file will be `build/libs/solarflux-vernemq-webook-X.war` where 
 version number.
 
 
-## Running in Container
+# Running in Servlet Container
 
 If the WAR is deployed into a servlet container (e.g. Tomcat) then a servlet
 context path of `/solarflux-vernemq-webhook` is used by default. Assuming the container is
@@ -123,7 +139,63 @@ listening on port **8080**, to access the app from a browser you would visit
 http://localhost:8080/solarflux-vernemq-webhook/.
 
 
-## Eclipse setup
+# Running Standalone
+
+The WAR file can be directly executed like this:
+
+	$ java -Dspring.profiles.active=development -jar build/libs/solarflux-vernemq-webhook-0.1.war
+	
+This will start the web server on port **8080** by default. You can verify the
+app has started up using a browser, or from the command line like this:
+
+	$ curl http://localhost:8080/
+
+You can add a context path to make it run like it does by default when deployed
+in a container by passing a `server.contextPath` parameter, or change the port
+via a `server.port` parameter, like this:
+
+	$ java -Dserver.contextPath=/solarflux-vernemq-webhook -Dserver.port=8888 \
+	-Dspring.profiles.active=development -jar build/libs/solarflux-vernemq-webhook-0.1.war
+
+
+# Tweaking Environment Properties
+
+When running standalone, or deploying Tomcat in Eclipse, you can override
+application properties for the active profile by creating an `application-X.yml`
+file in the root of the project. For example when running the **development**
+profile, create a file named `application-development.yml`. Those settings
+will override any settings from the `src/main/resources/application.yml` file
+included in the app.
+
+## General properties
+
+The following properties control various aspects of the application:
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `auth.nodeIpMask` |  | An IP address range in CIDR format to limit node-based authentication to, for example `192.168.0.0/24`. |
+| `auth.requireTokenClientIdPrefix` | `true` | If true, for token authentication the MQTT client ID must start with the token ID. |
+| `auth.userTopicPrefixEnabled` | `true` | If true, topics will be re-written to include a `user/X` prefix, where `X` is the ID of the authenticated user. |
+| `auth.allowDirectTokenAuthentication` | `true` | If true, allow raw token secret values to be used for passwords (in addition to signed hashes). If false then only signed hashes are allowed. |
+| `cache.actor.ttl` | `900` | The maximum length of time to cache user details, in seconds. |
+| `mqtt.forceCleanSession` | `true` | If `true` then force the MQTT _clean session_ connection flag to `true`, which prevents session persistence. |
+| `mqtt.maxQos` | `1` | The maximum MQTT Qos value to enforce for publish/subscribe. |
+| `solarnewtork.api.authPath` | `/solarflux/auth` | For token authentication, the URL path to use. |
+| `solarnetwork.api.host` | `data.solarnetwork.net` | For token authentication, the hostname to use. |
+| `solarnetwork.api.maxDateSkew` | `900000` | For token authentication, the maximum date skew to use, in milliseconds. |
+
+## Database connection properties
+
+The following properties all start with a `spring.datasource.` prefix.
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `url` | `jdbc:postgresql://localhost:5496/solarnetwork` | The JDBC URL to use. |
+| `username` | `solarauth` | The JDBC username to use. |
+| `password` | `solarauth` | The JDBC password to use. |
+
+
+# Eclipse setup
 
 The project is configured as an [Eclipse IDE][eclipse] project, and can
 be run as a normal web project using a Tomcat server configuration. The 
@@ -149,59 +221,6 @@ the following to the **VM arguments** field:
 Then change the **Working directory** field to **Other** and enter
 
 	${workspace_loc:solarflux-vernemq-webhook}
-
-
-## Running Standalone
-
-The WAR file can be directly executed like this:
-
-	$ java -Dspring.profiles.active=development -jar build/libs/solarflux-vernemq-webhook-0.1.war
-	
-This will start the web server on port **8080** by default. You can verify the
-app has started up using a browser, or from the command line like this:
-
-	$ curl http://localhost:8080/
-
-You can add a context path to make it run like it does by default when deployed
-in a container by passing a `server.contextPath` parameter, or change the port
-via a `server.port` parameter, like this:
-
-	$ java -Dserver.contextPath=/solarflux-vernemq-webhook -Dserver.port=8888 \
-	-Dspring.profiles.active=development -jar build/libs/solarflux-vernemq-webhook-0.1.war
-
-
-## Tweaking Environment Properties
-
-When running standalone, or deploying Tomcat in Eclipse, you can override
-application properties for the active profile by creating an `application-X.yml`
-file in the root of the project. For example when running the **development**
-profile, create a file named `application-development.yml`. Those settings
-will override any settings from the `src/main/resources/application.yml` file
-included in the app.
-
-### General properties
-
-| Property | Default | Description |
-|----------|---------|-------------|
-| `auth.nodeIpMask` |  | An IP address range in CIDR format to limit node-based authentication to, for example `192.168.0.0/24`. |
-| `auth.requireTokenClientIdPrefix` | `true` | If true, for token authentication the MQTT client ID must start with the token ID. |
-| `auth.userTopicPrefixEnabled` | `true` | If true, topics will be re-written to include a `user/X` prefix, where `X` is the ID of the authenticated user. |
-| `cache.actor.ttl` | `900` | The maximum length of time to cache user details, in seconds. |
-| `mqtt.forceCleanSession` | `true` | If `true` then force the MQTT _clean session_ connection flag to `true`, which prevents session persistence. |
-| `mqtt.maxQos` | `1` | The maximum MQTT Qos value to enforce for publish/subscribe. |
-| `solarnewtork.api.authPath` | `/solarflux/auth` | For token authentication, the URL path to use. |
-| `solarnetwork.api.host` | `data.solarnetwork.net` | For token authentication, the hostname to use. |
-| `solarnetwork.api.maxDateSkew` | `900000` | For token authentication, the maximum date skew to use, in milliseconds. |
-
-### Database connection properties
-
-The following properties all start with a `spring.datasource.` prefix.
-
-| Property | Default | Description |
-|----------|---------|-------------|
-| `url` | `jdbc:postgresql://localhost:5496/solarnetwork` | The JDBC URL to use. |
-| `username` | `solarauth` | The JDBC username to use. |
-| `password` | `solarauth` | The JDBC password to use. |
 
 
 [buildship]: https://projects.eclipse.org/projects/tools.buildship
