@@ -11,7 +11,7 @@ server:
   
 spring:
   datasource:
-    url: jdbc:postgresql://localhost:5496/solarnetwork_unittest
+    url: jdbc:postgresql://localhost:5412/solarnetwork_unittest
     username: solartest
     password: solartest
     platform: postgresql
