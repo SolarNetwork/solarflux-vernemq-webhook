@@ -25,10 +25,6 @@ Checkstyle configuration that checks the Google coding conventions from Google J
       <property name="allowByTailComment" value="true"/>
       <property name="allowNonPrintableEscapes" value="true"/>
     </module>
-    <module name="LineLength">
-      <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
-      <property name="max" value="100"/>
-    </module>
     <module name="AvoidStarImport"/>
     <module name="OneTopLevelClass"/>
     <module name="NoLineWrap"/>
@@ -157,12 +153,9 @@ Checkstyle configuration that checks the Google coding conventions from Google J
       <property name="tagOrder" value="@param, @return, @throws, @deprecated"/>
     </module>
     <module name="JavadocMethod">
-      <property name="minLineCount" value="2"/>
       <property name="allowedAnnotations" value="Override, Test, Before, ApiOperation"/>
       <property name="scope" value="public"/>
-      <property name="allowThrowsTagsForSubclasses" value="true"/>
       <property name="allowMissingParamTags" value="true"/>
-      <property name="allowMissingThrowsTags" value="true"/>
       <property name="allowMissingReturnTag" value="true"/>
     </module>
     <module name="MethodName">
@@ -188,6 +181,16 @@ Checkstyle configuration that checks the Google coding conventions from Google J
       <property name="checkFormat" value="$1"/>
       <property name="influenceFormat" value="$2"/>
     </module>
+  </module>
+  <module name="LineLength">
+    <property name="ignorePattern" value="^package.*|^import.*|a href|href|http://|https://|ftp://"/>
+    <property name="max" value="100"/>
+    <property name="fileExtensions" value="java"/>
+  </module>
+  <module name="SuppressWithPlainTextCommentFilter">
+    <property name="offCommentFormat" value="CHECKSTYLE OFF\: ([\w\|]+)"/>
+    <property name="onCommentFormat" value="CHECKSTYLE ON\: ([\w\|]+)"/>
+    <property name="checkFormat" value="$1"/>
   </module>
   <module name="FileTabCharacter">
     <property name="eachLine" value="true"/>

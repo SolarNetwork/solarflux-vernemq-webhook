@@ -22,7 +22,7 @@ ext {
 	jacksonVersion = '2.9.7'
 	springBootVersion = '1.5.16.RELEASE'
 	springVersion = '4.3.19.RELEASE'
-	checkstyleVersion = '8.5'
+	checkstyleVersion = '8.40'
 }
 
 configurations {

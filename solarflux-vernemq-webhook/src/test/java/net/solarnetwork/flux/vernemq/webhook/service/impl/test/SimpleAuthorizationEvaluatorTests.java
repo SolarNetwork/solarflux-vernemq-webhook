@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
@@ -1017,4 +1018,39 @@ public class SimpleAuthorizationEvaluatorTests {
             .withProperty("qos", equalTo(Qos.AtLeastOnce)));
     // @formatter:on
   }
+
+  @Test
+  public void publishAllowedWithUserPrefix_included() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/1/node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result Ok and unchanged", result, allOf(notNullValue(), is(sameInstance(request))));
+    // @formatter:off
+    assertThat("Topic allowed and keeps user prefix",
+        result,
+        pojo(Message.class)
+            .withProperty("topic", equalTo("user/1/node/2/datum/0/foo"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)));
+    // @formatter:on
+  }
+
+  @Test
+  public void publishDeniedWithUserPrefix_included_userIdDiffersFromActor() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/99/node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result not available", result, nullValue());
+  }
+
+  @Test
+  public void publishDeniedWithUserPrefix_included_userIdNaN() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/ABC/node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result not available", result, nullValue());
+  }
+
 }
