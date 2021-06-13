@@ -30,6 +30,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
+import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuditService;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
 
 /**
@@ -80,7 +81,7 @@ public class JdbcConfiguration {
   @Bean
   public JdbcAuthService authService() {
     JdbcAuthService service = new JdbcAuthService(new JdbcTemplate(dataSource),
-        authorizationEvaluator);
+        authorizationEvaluator, auditService());
     service.setSnHost(snHost);
     service.setSnPath(snPath);
     service.setMaxDateSkew(authMaxDateSkew);
@@ -89,6 +90,13 @@ public class JdbcConfiguration {
     service.setIpMask(nodeIpMask);
     service.setRequireTokenClientIdPrefix(requireTokenClientIdPrefix);
     service.setAllowDirectTokenAuthentication(allowDirectTokenAuthentication);
+    return service;
+  }
+
+  @Bean(destroyMethod = "disableWriting")
+  public JdbcAuditService auditService() {
+    JdbcAuditService service = new JdbcAuditService(dataSource);
+    service.enableWriting();
     return service;
   }
 
