@@ -65,15 +65,16 @@ import net.solarnetwork.util.StringUtils;
  * </p>
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
 
   /**
    * The default value for the {@code nodeDatumTopicRegex} property.
    */
-  // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
-  public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "(?:user/(\\d+)/)?node/(\\d+|\\+)/datum/([^/]+)(/.*)";
+  // CHECKSTYLE OFF: LineLength
+  public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "(?:user/(\\d+)/)?node/(\\d+|\\+)/datum/([^/]+)(/.+)";
+  // CHECKSTYLE ON: LineLength
 
   private Pattern nodeDatumTopicRegex = Pattern.compile(DEFAULT_NODE_DATUM_TOPIC_REGEX);
   private boolean userTopicPrefix = false;
@@ -182,6 +183,20 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
     TopicSettings result = (haveChange ? new TopicSettings(res) : topics);
     AUDIT_LOG.info("User {} granted subscribe access to topics [{}]", actor, result);
     return result;
+  }
+
+  @Override
+  public String sourceIdForPublish(Actor actor, Message message) {
+    if (actor == null || message == null || message.getTopic() == null
+        || message.getTopic().isEmpty()) {
+      return null;
+    }
+    final String topic = message.getTopic();
+    final Matcher m = nodeDatumTopicRegex.matcher(topic);
+    if (!m.matches()) {
+      return null;
+    }
+    return m.group(4);
   }
 
   private PathMatcher createPathMatcher() {

@@ -51,6 +51,7 @@ import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterModifiers;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.RegisterRequest;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.SubscribeRequest;
+import net.solarnetwork.flux.vernemq.webhook.service.AuditService;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
 import net.solarnetwork.web.security.AuthenticationUtils;
@@ -66,7 +67,7 @@ import net.solarnetwork.web.security.AuthorizationV2Builder;
  * </p>
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 public class JdbcAuthService implements AuthService {
 
@@ -98,23 +99,24 @@ public class JdbcAuthService implements AuthService {
    */
   public static final String DEFAULT_SN_PATH = "/solarflux/auth";
 
+  // CHECKSTYLE OFF: LineLength
+
   /**
    * The default value for the {@code authenticateCall} property.
    */
-  // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
   public static final String DEFAULT_AUTHENTICATE_CALL = "SELECT user_id,token_type,jpolicy FROM solaruser.snws2_find_verified_token_details(?,?,?,?,?)";
 
   /**
    * The default value for the {@code authorizeNodeCall} property.
    */
-  // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
   public static final String DEFAULT_AUTHORIZE_NODE_CALL = "SELECT user_id,'Node' AS token_type,NULL AS jpolicy,ARRAY[node_id] AS node_ids FROM solaruser.user_node WHERE node_id = ?";
 
   /**
    * The default value for the {@code authorizeCall} property.
    */
-  // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
   public static final String DEFAULT_AUTHORIZE_CALL = "SELECT user_id,token_type,jpolicy,node_ids FROM solaruser.user_auth_token_node_ids WHERE auth_token = ?";
+
+  // CHECKSTYLE ON: LineLength
 
   /**
    * The default value for the {@code maxDateSkew} property.
@@ -143,6 +145,7 @@ public class JdbcAuthService implements AuthService {
   private final JdbcOperations jdbcOps;
   private final AuthorizationEvaluator authEvaluator;
   private final Pattern directTokenSecretRegex;
+  private final AuditService auditService;
   private String authenticateCall = DEFAULT_AUTHENTICATE_CALL;
   private String authorizeNodeCall = DEFAULT_AUTHORIZE_NODE_CALL;
   private String authorizeCall = DEFAULT_AUTHORIZE_CALL;
@@ -165,7 +168,7 @@ public class JdbcAuthService implements AuthService {
    *        the authorization evaluator to use
    */
   public JdbcAuthService(JdbcOperations jdbcOps, AuthorizationEvaluator authEvaluator) {
-    this(jdbcOps, authEvaluator, DEFAULT_DIRECT_TOKEN_SECRET_REGEX);
+    this(jdbcOps, authEvaluator, new NoOpAuditService());
   }
 
   /**
@@ -175,15 +178,35 @@ public class JdbcAuthService implements AuthService {
    *        the JDBC API
    * @param authEvaluator
    *        the authorization evaluator to use
+   * @param auditService
+   *        the audit service to use
+   * @since 1.2
+   */
+  public JdbcAuthService(JdbcOperations jdbcOps, AuthorizationEvaluator authEvaluator,
+      AuditService auditService) {
+    this(jdbcOps, authEvaluator, auditService, DEFAULT_DIRECT_TOKEN_SECRET_REGEX);
+  }
+
+  /**
+   * Constructor.
+   * 
+   * @param jdbcOps
+   *        the JDBC API
+   * @param authEvaluator
+   *        the authorization evaluator to use
+   * @param auditService
+   *        the audit service to use
    * @param directTokenSecretRegex
    *        the regular expression that matches direct token secrets
    */
   public JdbcAuthService(JdbcOperations jdbcOps, AuthorizationEvaluator authEvaluator,
-      Pattern directTokenSecretRegex) {
+      AuditService auditService, Pattern directTokenSecretRegex) {
     super();
-    assert jdbcOps != null && authEvaluator != null && directTokenSecretRegex != null;
+    assert jdbcOps != null && authEvaluator != null && auditService != null
+        && directTokenSecretRegex != null;
     this.jdbcOps = jdbcOps;
     this.authEvaluator = authEvaluator;
+    this.auditService = auditService;
     this.directTokenSecretRegex = directTokenSecretRegex;
   }
 
@@ -460,6 +483,9 @@ public class JdbcAuthService implements AuthService {
     } else if (result == request) {
       return new Response();
     }
+
+    auditService.auditPublishMessage(actor, nodeId, authEvaluator.sourceIdForPublish(actor, result),
+        result);
 
     // @formatter:off
     PublishModifiers mods = PublishModifiers.builder()
@@ -800,7 +826,7 @@ public class JdbcAuthService implements AuthService {
    * This is provided in CIDR format, e.g. {@literal 192.168.0.0/24}.
    * </p>
    * 
-   * @return
+   * @return the IP address mask
    */
   public String getIpMask() {
     return (ipMask != null ? ipMask.getCidrSignature() : null);
