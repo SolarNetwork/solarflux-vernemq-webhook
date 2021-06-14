@@ -46,7 +46,7 @@ debugMode: true
 spring:
   profiles: development
   datasource:
-    url: jdbc:postgresql://localhost:5496/solarnetwork
+    url: jdbc:postgresql://localhost:5412/solarnetwork
     username: solarauth
     password: solarauth
 
