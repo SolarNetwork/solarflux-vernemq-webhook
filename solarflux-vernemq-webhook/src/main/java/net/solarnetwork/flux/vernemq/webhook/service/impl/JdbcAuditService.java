@@ -200,6 +200,7 @@ public class JdbcAuditService implements AuditService {
 
     @Override
     public void run() {
+      log.info("Started JDBC audit writer thread {}", this);
       while (keepGoing.get()) {
         keepGoingWithConnection.set(true);
         synchronized (this) {
@@ -209,12 +210,12 @@ public class JdbcAuditService implements AuditService {
         try {
           keepGoing.compareAndSet(true, execute());
         } catch (SQLException | RuntimeException e) {
-          log.warn("Exception with query auditing", e);
+          log.warn("Exception with auditing", e);
           // sleep, then try again
           try {
             Thread.sleep(connectionRecoveryDelay);
           } catch (InterruptedException e2) {
-            log.info("Writer thread interrupted: exiting now.");
+            log.info("Audit writer thread interrupted: exiting now.");
             keepGoing.set(false);
           }
         }
@@ -267,7 +268,7 @@ public class JdbcAuditService implements AuditService {
         stmt.execute();
         long currUpdateCount = updateCount.incrementAndGet();
         if (statLogUpdateCount > 0 && currUpdateCount % statLogUpdateCount == 0) {
-          log.info("Updated {} node source query count records", currUpdateCount);
+          log.info("Updated {} node source byte count records", currUpdateCount);
         }
         if (updateDelay > 0) {
           Thread.sleep(updateDelay);
