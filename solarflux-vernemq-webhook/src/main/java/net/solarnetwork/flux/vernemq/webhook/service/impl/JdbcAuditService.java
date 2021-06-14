@@ -260,6 +260,10 @@ public class JdbcAuditService implements AuditService {
         continue;
       }
       try {
+        if (log.isTraceEnabled()) {
+          log.trace("Incrementing node {} source {} @ {} byte count by {}", key.getNodeId(),
+              key.getSourceId(), key.getTimestamp(), count);
+        }
         stmt.setString(1, mqttServiceName);
         stmt.setObject(2, key.getNodeId());
         stmt.setString(3, key.getSourceId());
