@@ -98,6 +98,7 @@ public class JdbcConfiguration {
     return service;
   }
 
+  @ConfigurationProperties(prefix = "app.audit.jdbc")
   @Bean(destroyMethod = "disableWriting")
   public JdbcAuditService auditService() {
     JdbcAuditService service = new JdbcAuditService(
