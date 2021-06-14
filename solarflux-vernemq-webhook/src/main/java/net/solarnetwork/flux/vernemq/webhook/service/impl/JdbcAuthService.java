@@ -480,12 +480,14 @@ public class JdbcAuthService implements AuthService {
     Message result = authEvaluator.evaluatePublish(actor, request);
     if (result == null) {
       return new Response(ResponseStatus.NEXT);
-    } else if (result == request) {
-      return new Response();
     }
 
     auditService.auditPublishMessage(actor, nodeId, authEvaluator.sourceIdForPublish(actor, result),
         result);
+
+    if (result == request) {
+      return new Response();
+    }
 
     // @formatter:off
     PublishModifiers mods = PublishModifiers.builder()
