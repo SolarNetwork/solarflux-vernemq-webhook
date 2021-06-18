@@ -23,13 +23,17 @@ import javax.sql.DataSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.autoconfigure.jdbc.DataSourceProperties;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Primary;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 import net.solarnetwork.flux.vernemq.webhook.service.AuthorizationEvaluator;
+import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuditService;
 import net.solarnetwork.flux.vernemq.webhook.service.impl.JdbcAuthService;
 
 /**
@@ -62,15 +66,16 @@ public class JdbcConfiguration {
   @Value("${auth.allowDirectTokenAuthentication:true}")
   private boolean allowDirectTokenAuthentication = true;
 
-  @Autowired
-  public DataSource dataSource;
+  @Autowired(required = false)
+  @Qualifier("audit")
+  private DataSource auditDataSource;
 
   @Autowired
-  public AuthorizationEvaluator authorizationEvaluator;
+  private AuthorizationEvaluator authorizationEvaluator;
 
   @Autowired(required = false)
   @Qualifier("actor")
-  public Cache<String, Actor> actorCache;
+  private Cache<String, Actor> actorCache;
 
   /**
    * The {@link AuthService}.
@@ -79,8 +84,9 @@ public class JdbcConfiguration {
    */
   @Bean
   public JdbcAuthService authService() {
-    JdbcAuthService service = new JdbcAuthService(new JdbcTemplate(dataSource),
-        authorizationEvaluator);
+    JdbcAuthService service = new JdbcAuthService(
+        new JdbcTemplate(primaryDataSource(dataSourceProperties())), authorizationEvaluator,
+        auditService());
     service.setSnHost(snHost);
     service.setSnPath(snPath);
     service.setMaxDateSkew(authMaxDateSkew);
@@ -90,6 +96,31 @@ public class JdbcConfiguration {
     service.setRequireTokenClientIdPrefix(requireTokenClientIdPrefix);
     service.setAllowDirectTokenAuthentication(allowDirectTokenAuthentication);
     return service;
+  }
+
+  @ConfigurationProperties(prefix = "app.audit.jdbc")
+  @Bean(destroyMethod = "disableWriting")
+  public JdbcAuditService auditService() {
+    JdbcAuditService service = new JdbcAuditService(
+        auditDataSource != null ? auditDataSource : primaryDataSource(dataSourceProperties()));
+    service.enableWriting();
+    return service;
+  }
+
+  @Bean
+  @Primary
+  @ConfigurationProperties(prefix = "spring.datasource")
+  public DataSourceProperties dataSourceProperties() {
+    return new DataSourceProperties();
+  }
+
+  @Bean
+  @Primary
+  @ConfigurationProperties(prefix = "spring.datasource.tomcat")
+  public DataSource primaryDataSource(DataSourceProperties properties) {
+    DataSource dataSource = properties.initializeDataSourceBuilder()
+        .type(org.apache.tomcat.jdbc.pool.DataSource.class).build();
+    return dataSource;
   }
 
 }

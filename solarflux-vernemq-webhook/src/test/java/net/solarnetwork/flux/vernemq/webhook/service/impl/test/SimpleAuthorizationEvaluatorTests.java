@@ -24,6 +24,7 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
+import static org.hamcrest.Matchers.is;
 import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
@@ -53,7 +54,7 @@ import net.solarnetwork.flux.vernemq.webhook.service.impl.SimpleAuthorizationEva
  * Test cases for the {@link SimpleAuthorizationEvaluator} class.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class SimpleAuthorizationEvaluatorTests {
 
@@ -1017,4 +1018,90 @@ public class SimpleAuthorizationEvaluatorTests {
             .withProperty("qos", equalTo(Qos.AtLeastOnce)));
     // @formatter:on
   }
+
+  @Test
+  public void publishAllowedWithUserPrefix_included() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/1/node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result Ok and unchanged", result, allOf(notNullValue(), is(sameInstance(request))));
+    // @formatter:off
+    assertThat("Topic allowed and keeps user prefix",
+        result,
+        pojo(Message.class)
+            .withProperty("topic", equalTo("user/1/node/2/datum/0/foo"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)));
+    // @formatter:on
+  }
+
+  @Test
+  public void publishDeniedWithUserPrefix_included_userIdDiffersFromActor() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/99/node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result not available", result, nullValue());
+  }
+
+  @Test
+  public void publishDeniedWithUserPrefix_included_userIdNaN() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/ABC/node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    Message result = service.evaluatePublish(actor, request);
+    assertThat("Result not available", result, nullValue());
+  }
+
+  @Test
+  public void sourceIdForPublish_simple() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/99/node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    String sourceId = service.sourceIdForPublish(actor, request);
+    assertThat("Source ID extracted", sourceId, is(equalTo("/foo")));
+  }
+
+  @Test
+  public void sourceIdForPublish_withoutUserId() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("node/2/datum/0/foo");
+    service.setUserTopicPrefix(true);
+    String sourceId = service.sourceIdForPublish(actor, request);
+    assertThat("Source ID extracted", sourceId, is(equalTo("/foo")));
+  }
+
+  @Test
+  public void sourceIdForPublish_spaces() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/99/node/2/datum/0/Mock Power Meter");
+    service.setUserTopicPrefix(true);
+    String sourceId = service.sourceIdForPublish(actor, request);
+    assertThat("Source ID extracted", sourceId, is(equalTo("/Mock Power Meter")));
+  }
+
+  @Test
+  public void sourceIdForPublish_path() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/99/node/2/datum/0/a/path/here");
+    service.setUserTopicPrefix(true);
+    String sourceId = service.sourceIdForPublish(actor, request);
+    assertThat("Source ID extracted", sourceId, is(equalTo("/a/path/here")));
+  }
+
+  @Test
+  public void sourceIdForPublish_nullInput() {
+    String sourceId = service.sourceIdForPublish(null, null);
+    assertThat("Source ID not available", sourceId, is(nullValue()));
+  }
+
+  @Test
+  public void sourceIdForPublish_noMatch() {
+    ActorDetails actor = actor(2L);
+    Message request = requestMessage("user/99/node/2/datum/0/");
+    service.setUserTopicPrefix(true);
+    String sourceId = service.sourceIdForPublish(actor, request);
+    assertThat("Source ID not available", sourceId, is(nullValue()));
+  }
+
 }

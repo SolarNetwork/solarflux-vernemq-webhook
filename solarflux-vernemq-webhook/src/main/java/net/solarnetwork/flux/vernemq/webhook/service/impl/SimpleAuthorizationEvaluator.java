@@ -65,15 +65,16 @@ import net.solarnetwork.util.StringUtils;
  * </p>
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
 
   /**
    * The default value for the {@code nodeDatumTopicRegex} property.
    */
-  // CHECKSTYLE IGNORE LineLength FOR NEXT 1 LINE
-  public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "node/(\\d+|\\+)/datum/([^/]+)(/.*)";
+  // CHECKSTYLE OFF: LineLength
+  public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "(?:user/(\\d+)/)?node/(\\d+|\\+)/datum/([^/]+)(/.+)";
+  // CHECKSTYLE ON: LineLength
 
   private Pattern nodeDatumTopicRegex = Pattern.compile(DEFAULT_NODE_DATUM_TOPIC_REGEX);
   private boolean userTopicPrefix = false;
@@ -100,15 +101,16 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
       AUDIT_LOG.info("Topic [{}] access denied to {}: invalid topic pattern", topic, actor);
       return null;
     } else {
-      String topicNode = m.group(1);
-      String topicAgg = m.group(2);
-      String topicSource = m.group(3);
-      if (!(topicNodeAllowed(actor, topic, topicNode)
+      String topicUserId = m.group(1);
+      String topicNode = m.group(2);
+      String topicAgg = m.group(3);
+      String topicSource = m.group(4);
+      if (!(topicUserAllowed(actor, topic, topicUserId) && topicNodeAllowed(actor, topic, topicNode)
           && topicSourceAllowed(actor, topic, topicSource)
           && topicAggregationAllowed(actor, topic, topicAgg))) {
         return null;
       }
-      if (userTopicPrefix) {
+      if (userTopicPrefix && (topicUserId == null || topicUserId.isEmpty())) {
         topic = "user/" + actor.getUserId() + "/" + topic;
       }
     }
@@ -152,15 +154,17 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
         AUDIT_LOG.info("Topic [{}] access denied to {}: invalid topic pattern", topic, actor);
         qos = Qos.NotAllowed;
       } else {
-        String topicNode = m.group(1);
-        String topicAgg = m.group(2);
-        String topicSource = m.group(3);
-        if (!(topicNodeAllowed(actor, topic, topicNode)
+        String topicUserId = m.group(1);
+        String topicNode = m.group(2);
+        String topicAgg = m.group(3);
+        String topicSource = m.group(4);
+        if (!(topicUserAllowed(actor, topicSource, topicUserId)
+            && topicNodeAllowed(actor, topic, topicNode)
             && topicSourceAllowed(actor, topic, topicSource)
             && topicAggregationAllowed(actor, topic, topicAgg))) {
           qos = Qos.NotAllowed;
         }
-        if (userTopicPrefix) {
+        if (userTopicPrefix && (topicUserId == null || topicUserId.isEmpty())) {
           topic = "user/" + actor.getUserId() + "/" + topic;
         }
       }
@@ -181,11 +185,51 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
     return result;
   }
 
+  @Override
+  public String sourceIdForPublish(Actor actor, Message message) {
+    if (actor == null || message == null || message.getTopic() == null
+        || message.getTopic().isEmpty()) {
+      return null;
+    }
+    final String topic = message.getTopic();
+    final Matcher m = nodeDatumTopicRegex.matcher(topic);
+    if (!m.matches()) {
+      return null;
+    }
+    return m.group(4);
+  }
+
   private PathMatcher createPathMatcher() {
     AntPathMatcher matcher = new AntPathMatcher();
     matcher.setCachePatterns(true);
     matcher.setCaseSensitive(true);
     return matcher;
+  }
+
+  private boolean topicUserAllowed(Actor actor, String topic, String topicUserId) {
+    if (topicUserId != null && !topicUserId.isEmpty()) {
+      Long actorUserId = actor.getUserId();
+      if (actorUserId == null) {
+        // userId required for matching topic user
+        AUDIT_LOG.info(
+            "Topic [{}] access denied to {}: topic user ID not allowed without actor user ID",
+            topic, actor);
+        return false;
+      }
+      try {
+        Long userId = Long.valueOf(topicUserId);
+        if (!actorUserId.equals(userId)) {
+          // requested user ID not allowed
+          AUDIT_LOG.info("Topic [{}] access denied to {}: user ID not allowed", topic, actor);
+          return false;
+        }
+      } catch (NumberFormatException e) {
+        // should not be here; deny access
+        AUDIT_LOG.info("Topic [{}] access denied to {}: user ID not a number", topic, actor);
+        return false;
+      }
+    }
+    return true;
   }
 
   private boolean topicNodeAllowed(Actor actor, String topic, String topicNode) {

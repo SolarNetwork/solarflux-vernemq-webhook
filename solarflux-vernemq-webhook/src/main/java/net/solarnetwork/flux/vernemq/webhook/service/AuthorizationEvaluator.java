@@ -25,7 +25,7 @@ import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
  * Service to evaluate requests against security policies.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public interface AuthorizationEvaluator {
 
@@ -52,5 +52,17 @@ public interface AuthorizationEvaluator {
    *         for any reason
    */
   Message evaluatePublish(Actor actor, Message message);
+
+  /**
+   * Extract the source ID from a publish message.
+   * 
+   * @param actor
+   *        the actor
+   * @param message
+   *        the message
+   * @return the source ID, or {@literal null} if one cannot be determined
+   * @since 1.1
+   */
+  String sourceIdForPublish(Actor actor, Message message);
 
 }
