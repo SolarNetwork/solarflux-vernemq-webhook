@@ -24,14 +24,14 @@ import static com.spotify.hamcrest.jackson.JsonMatchers.jsonInt;
 import static com.spotify.hamcrest.jackson.JsonMatchers.jsonMissing;
 import static com.spotify.hamcrest.jackson.JsonMatchers.jsonObject;
 import static com.spotify.hamcrest.jackson.JsonMatchers.jsonText;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -54,7 +54,7 @@ public class ResponseTests extends TestSupport {
 
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setup() {
     objectMapper = JsonUtils.defaultObjectMapper();
   }
@@ -132,7 +132,6 @@ public class ResponseTests extends TestSupport {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void jsonOkWithTopicList() throws JsonProcessingException {
     TopicList topics = new TopicList(Arrays.asList("foo", "bar"));
     Response r = new Response(topics);

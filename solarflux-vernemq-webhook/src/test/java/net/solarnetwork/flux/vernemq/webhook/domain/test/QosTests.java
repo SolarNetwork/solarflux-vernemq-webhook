@@ -19,13 +19,14 @@ package net.solarnetwork.flux.vernemq.webhook.domain.test;
 
 import static com.spotify.hamcrest.jackson.IsJsonStringMatching.isJsonStringMatching;
 import static com.spotify.hamcrest.jackson.JsonMatchers.jsonInt;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -42,7 +43,7 @@ public class QosTests {
 
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setup() {
     objectMapper = JsonUtils.defaultObjectMapper();
   }
@@ -70,9 +71,11 @@ public class QosTests {
     }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void forKeyBadValue() {
-    Qos.forKey(-1);
+    assertThrows(IllegalArgumentException.class, () -> {
+      Qos.forKey(-1);
+    });
   }
 
 }

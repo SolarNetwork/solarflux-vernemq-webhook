@@ -20,6 +20,7 @@ package net.solarnetwork.flux.vernemq.webhook.service.impl.test;
 import static com.spotify.hamcrest.pojo.IsPojo.pojo;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
@@ -29,15 +30,14 @@ import static org.hamcrest.Matchers.not;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
 import static org.hamcrest.Matchers.sameInstance;
-import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import net.solarnetwork.central.domain.Aggregation;
 import net.solarnetwork.central.security.BasicSecurityPolicy;
@@ -60,7 +60,7 @@ public class SimpleAuthorizationEvaluatorTests {
 
   private SimpleAuthorizationEvaluator service;
 
-  @Before
+  @BeforeEach
   public void setup() {
     service = new SimpleAuthorizationEvaluator();
   }
@@ -752,7 +752,6 @@ public class SimpleAuthorizationEvaluatorTests {
     // @formatter:on
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void subscribeWithPolicyMinAggregationNone() {
     SecurityPolicy policy = policyForMinAggregation(Aggregation.None);
@@ -780,7 +779,6 @@ public class SimpleAuthorizationEvaluatorTests {
     // @formatter:on
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void subscribeWithPolicyMinAggregationHour() {
     SecurityPolicy policy = policyForMinAggregation(Aggregation.Hour);
@@ -808,7 +806,6 @@ public class SimpleAuthorizationEvaluatorTests {
     // @formatter:on
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void subscribeWithPolicyMinAggregationDay() {
     SecurityPolicy policy = policyForMinAggregation(Aggregation.Day);
@@ -836,7 +833,6 @@ public class SimpleAuthorizationEvaluatorTests {
     // @formatter:on
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void subscribeWithPolicyMinAggregationMonth() {
     SecurityPolicy policy = policyForMinAggregation(Aggregation.Month);
@@ -864,7 +860,6 @@ public class SimpleAuthorizationEvaluatorTests {
     // @formatter:on
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void subscribeWithPolicyMinAggregationYear() {
     SecurityPolicy policy = policyForMinAggregation(Aggregation.Year);

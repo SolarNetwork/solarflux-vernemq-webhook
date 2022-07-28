@@ -20,11 +20,11 @@ package net.solarnetwork.flux.vernemq.webhook.service.impl.test;
 import static com.spotify.hamcrest.pojo.IsPojo.pojo;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toSet;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.notNullValue;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 
 import java.util.Arrays;
 import java.util.List;
@@ -34,16 +34,15 @@ import javax.sql.DataSource;
 
 import org.joda.time.DateTime;
 import org.joda.time.DateTimeZone;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 
 import net.solarnetwork.central.security.BasicSecurityPolicy;
 import net.solarnetwork.central.security.SecurityPolicy;
@@ -68,7 +67,7 @@ import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
  * @author matt
  * @version 1.0
  */
-@RunWith(SpringRunner.class)
+@SpringJUnitConfig
 @JdbcTest
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 public class JdbcAuthServiceIntegrationTests extends TestSupport {
@@ -79,7 +78,7 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
   protected JdbcOperations jdbcOps;
   protected JdbcAuthService authService;
 
-  @Before
+  @BeforeEach
   public void setup() {
     jdbcOps = new JdbcTemplate(dataSource);
     authService = new JdbcAuthService(jdbcOps, new SimpleAuthorizationEvaluator());
@@ -470,7 +469,6 @@ public class JdbcAuthServiceIntegrationTests extends TestSupport {
     // @formatter:on
   }
 
-  @SuppressWarnings("unchecked")
   @Test
   public void subscribeDeniedFromPolicySource() {
     // given

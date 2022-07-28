@@ -22,6 +22,10 @@ import java.sql.SQLException;
 
 import org.springframework.jdbc.core.RowMapper;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.joda.JodaModule;
+
 import net.solarnetwork.central.security.BasicSecurityPolicy;
 import net.solarnetwork.central.security.SecurityPolicy;
 import net.solarnetwork.central.support.JsonUtils;
@@ -49,6 +53,7 @@ public class SnTokenDetailsRowMapper implements RowMapper<SnTokenDetails> {
    */
   public static int DEFAULT_POLICY_COL = 3;
 
+  private final ObjectMapper mapper;
   private final String tokenId;
   private final int userIdCol;
   private final int tokenTypeCol;
@@ -82,6 +87,10 @@ public class SnTokenDetailsRowMapper implements RowMapper<SnTokenDetails> {
     this.userIdCol = userIdCol;
     this.tokenTypeCol = tokenTypeCol;
     this.policyCol = policyCol;
+
+    ObjectMapper mapper = JsonUtils.newObjectMapper();
+    mapper.registerModule(new JodaModule());
+    this.mapper = mapper;
   }
 
   @Override
@@ -91,9 +100,11 @@ public class SnTokenDetailsRowMapper implements RowMapper<SnTokenDetails> {
     String policyJson = rs.getString(policyCol);
     SecurityPolicy policy = null;
     if (policyJson != null) {
-      // note we use .central.support.JsonUtils and not .util.JsonUtils here because
-      // we don't want the Joda module used when parsing the epoch timestamps
-      policy = JsonUtils.getObjectFromJSON(policyJson, BasicSecurityPolicy.class);
+      try {
+        policy = mapper.readValue(policyJson, BasicSecurityPolicy.class);
+      } catch (JsonProcessingException e) {
+        // simply ignore
+      }
     }
     // @formatter:off
     return SnTokenDetails.builder()

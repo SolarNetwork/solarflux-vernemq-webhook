@@ -23,14 +23,13 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.test.web.servlet.MockMvc;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.HookType;
@@ -42,7 +41,7 @@ import net.solarnetwork.flux.vernemq.webhook.service.AuthService;
 import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
 import net.solarnetwork.flux.vernemq.webhook.web.AuthHooksController;
 
-@RunWith(SpringRunner.class)
+@SpringJUnitConfig
 @WebMvcTest(AuthHooksController.class)
 public class AuthHooksControllerTests extends TestSupport {
 
@@ -65,7 +64,7 @@ public class AuthHooksControllerTests extends TestSupport {
     // @formatter:off
     mvc.perform(
         post("/hook")
-            .contentType(MediaType.APPLICATION_JSON_UTF8)
+            .contentType(MediaType.APPLICATION_JSON)
             .header(HOOK_HEADER, HookType.AuthenticateOnRegister.getKey())
             .content(classResourceAsBytes("auth_on_register-01.json"))
             .accept(MediaType.APPLICATION_JSON))
@@ -85,7 +84,7 @@ public class AuthHooksControllerTests extends TestSupport {
     // @formatter:off
     mvc.perform(
         post("/hook")
-            .contentType(MediaType.APPLICATION_JSON_UTF8)
+            .contentType(MediaType.APPLICATION_JSON)
             .header(HOOK_HEADER, HookType.AuthorizeOnPublish.getKey())
             .content(classResourceAsBytes("auth_on_publish-01.json"))
             .accept(MediaType.APPLICATION_JSON))
@@ -105,7 +104,7 @@ public class AuthHooksControllerTests extends TestSupport {
     // @formatter:off
     mvc.perform(
         post("/hook")
-            .contentType(MediaType.APPLICATION_JSON_UTF8)
+            .contentType(MediaType.APPLICATION_JSON)
             .header(HOOK_HEADER, HookType.AuthorizeOnSubscribe.getKey())
             .content(classResourceAsBytes("auth_on_subscribe-01.json"))
             .accept(MediaType.APPLICATION_JSON))

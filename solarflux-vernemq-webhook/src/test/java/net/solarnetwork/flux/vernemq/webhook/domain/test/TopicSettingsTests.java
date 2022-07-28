@@ -22,17 +22,17 @@ import static com.spotify.hamcrest.jackson.JsonMatchers.jsonArray;
 import static com.spotify.hamcrest.jackson.JsonMatchers.jsonInt;
 import static com.spotify.hamcrest.jackson.JsonMatchers.jsonObject;
 import static com.spotify.hamcrest.jackson.JsonMatchers.jsonText;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.assertThat;
 
 import java.io.IOException;
 import java.util.Arrays;
 
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -52,13 +52,12 @@ public class TopicSettingsTests extends TestSupport {
 
   private ObjectMapper objectMapper;
 
-  @Before
+  @BeforeEach
   public void setup() {
     objectMapper = JsonUtils.defaultObjectMapper();
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void toJsonFull() throws JsonProcessingException {
     TopicSettings settings = new TopicSettings(Arrays.asList(
         TopicSubscriptionSetting.builder().withTopic("foo").withQos(Qos.AtLeastOnce).build(),

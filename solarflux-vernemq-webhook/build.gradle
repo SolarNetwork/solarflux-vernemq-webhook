@@ -1,15 +1,19 @@
 plugins {
     id 'checkstyle'
     id 'java'
-    id 'war'
     id 'eclipse'
-    id 'eclipse-wtp'
-    id 'org.springframework.boot' version '1.5.16.RELEASE'
+	id 'org.springframework.boot' version '2.7.1'
 }
 
 apply plugin: 'checkstyle'
 apply plugin: 'org.springframework.boot'
 apply plugin: 'io.spring.dependency-management'
+
+dependencyManagement {
+	imports {
+		mavenBom org.springframework.boot.gradle.plugin.SpringBootPlugin.BOM_COORDINATES
+	}
+}
 
 repositories {
     jcenter()
@@ -19,9 +23,6 @@ repositories {
 }
 
 ext {
-	jacksonVersion = '2.9.7'
-	springBootVersion = '1.5.16.RELEASE'
-	springVersion = '4.3.19.RELEASE'
 	checkstyleVersion = '8.40'
 }
 
@@ -45,38 +46,36 @@ checkstyle {
 }
 
 dependencies {
-	compile "org.springframework.boot:spring-boot-starter:${springBootVersion}"
-	compile "org.springframework.boot:spring-boot-starter-cache:${springBootVersion}"
-	compile "org.springframework.boot:spring-boot-starter-jdbc:${springBootVersion}"
-	compile "org.springframework.boot:spring-boot-starter-web:${springBootVersion}"
-
-	// allow WAR to be run from command line OR deployed in Tomcat
-	providedRuntime 'org.springframework.boot:spring-boot-starter-tomcat'
+	implementation "org.springframework.boot:spring-boot-starter"
+	implementation "org.springframework.boot:spring-boot-starter-cache"
+	implementation "org.springframework.boot:spring-boot-starter-jdbc"
+	implementation "org.springframework.boot:spring-boot-starter-web"
 
 	// DB
-	runtime 'org.postgresql:postgresql:42.2.5'
+	runtimeOnly 'org.postgresql:postgresql'
 		
 	// JCache
-	compile 'javax.cache:cache-api:1.0.0'
-	compile 'org.ehcache:ehcache:3.6.2'
+	implementation 'javax.cache:cache-api'
+	implementation 'org.ehcache:ehcache'
 
 	// JSON
-	compile "com.fasterxml.jackson.core:jackson-annotations:${jacksonVersion}"
-	compile "com.fasterxml.jackson.core:jackson-core:${jacksonVersion}"
-	compile "com.fasterxml.jackson.core:jackson-databind:${jacksonVersion}"
-	compile "com.fasterxml.jackson.datatype:jackson-datatype-joda:${jacksonVersion}"
+	implementation "com.fasterxml.jackson.core:jackson-annotations"
+	implementation "com.fasterxml.jackson.core:jackson-core"
+	implementation "com.fasterxml.jackson.core:jackson-databind"
+	implementation "com.fasterxml.jackson.datatype:jackson-datatype-joda"
 
 	// SolarNetwork
-	compile 'net.solarnetwork.common:net.solarnetwork.common.web:1.15.0'
-	compile 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.15.0'
+	implementation 'net.solarnetwork.common:net.solarnetwork.common.web:1.15.0'
+	implementation 'net.solarnetwork.central:net.solarnetwork.central.common.security:1.15.0'
 
 	// Utils
-    compile 'com.github.veqryn:cidr-ip-trie:1.0.1'
+    implementation 'com.github.veqryn:cidr-ip-trie:1.0.1'
     
     // Testing
-    testCompile "org.springframework.boot:spring-boot-starter-test:${springBootVersion}"
-	testCompile 'com.spotify:hamcrest-jackson:1.1.3'
-    testCompile 'com.spotify:hamcrest-pojo:1.1.3'
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
+	testImplementation 'org.junit.jupiter:junit-jupiter-api'
+	testImplementation 'com.spotify:hamcrest-jackson:1.1.3'
+    testImplementation 'com.spotify:hamcrest-pojo:1.1.3'
 }
 
 sourceCompatibility = 1.8
@@ -87,25 +86,9 @@ eclipse {
 		natures 'net.sf.eclipsecs.core.CheckstyleNature'
 		buildCommand 'net.sf.eclipsecs.core.CheckstyleBuilder'
 	}
-	wtp {
-		facet {
-			facet name: 'jst.java', version: 1.8
-			facet name: 'jst.web', version: '3.1'
-		}
-	}
 }
 
 jar {
-    baseName = 'solarflux-vernemq-webhook'
-    version =  version
-    manifest {
-        attributes 'Implementation-Title': 'SolarFlux VerneMQ Webhook Server',
-                   'Implementation-Version': version
-    }
-}
-
-
-war {
     baseName = 'solarflux-vernemq-webhook'
     version =  version
     manifest {
