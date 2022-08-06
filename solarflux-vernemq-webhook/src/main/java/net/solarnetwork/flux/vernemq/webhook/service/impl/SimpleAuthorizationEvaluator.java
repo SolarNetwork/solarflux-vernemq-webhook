@@ -158,7 +158,7 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
         String topicNode = m.group(2);
         String topicAgg = m.group(3);
         String topicSource = m.group(4);
-        if (!(topicUserAllowed(actor, topicSource, topicUserId)
+        if (!(topicUserAllowed(actor, topic, topicUserId)
             && topicNodeAllowed(actor, topic, topicNode)
             && topicSourceAllowed(actor, topic, topicSource)
             && topicAggregationAllowed(actor, topic, topicAgg))) {
