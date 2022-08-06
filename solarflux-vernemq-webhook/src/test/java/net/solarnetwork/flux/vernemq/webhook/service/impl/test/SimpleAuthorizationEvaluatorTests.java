@@ -43,6 +43,7 @@ import net.solarnetwork.central.domain.Aggregation;
 import net.solarnetwork.central.security.BasicSecurityPolicy;
 import net.solarnetwork.central.security.SecurityPolicy;
 import net.solarnetwork.flux.vernemq.webhook.domain.ActorDetails;
+import net.solarnetwork.flux.vernemq.webhook.domain.ActorType;
 import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
@@ -83,12 +84,23 @@ public class SimpleAuthorizationEvaluatorTests {
     return actor(policy, false, nodes);
   }
 
+  private ActorDetails actor(SecurityPolicy policy, ActorType actorType, Long... nodes) {
+    return actor(policy, actorType, false, nodes);
+  }
+
   private ActorDetails actor(SecurityPolicy policy, boolean publishAllowed, Long... nodes) {
+    return actor(policy, (publishAllowed ? ActorType.Node : ActorType.ReadNodeDataToken),
+        publishAllowed, nodes);
+  }
+
+  private ActorDetails actor(SecurityPolicy policy, ActorType actorType, boolean publishAllowed,
+      Long... nodes) {
     Set<Long> nodeIds = null;
     if (nodes != null) {
       nodeIds = Arrays.stream(nodes).collect(toSet());
     }
-    return new ActorDetails(UUID.randomUUID().toString(), publishAllowed, 1L, policy, nodeIds);
+    return new ActorDetails(UUID.randomUUID().toString(), actorType, publishAllowed, 1L, policy,
+        nodeIds);
   }
 
   private ActorDetails actor(Long node) {
@@ -955,6 +967,114 @@ public class SimpleAuthorizationEvaluatorTests {
         pojo(TopicSubscriptionSetting.class)
             .withProperty("topic", equalTo("user/1/node/+/datum/0/#"))
             .withProperty("qos", equalTo(Qos.AtLeastOnce)));
+    // @formatter:on
+  }
+
+  @Test
+  public void subscribeUserTopicAllowed() {
+    SecurityPolicy policy = null;
+    ActorDetails actor = actor(policy, ActorType.UserToken, 2L, 3L);
+    TopicSettings request = requestForTopics("user/1/events");
+    service.setUserTopicPrefix(true);
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic allowed and keeps user prefix",
+        result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("user/1/events"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)));
+    // @formatter:on
+  }
+
+  @Test
+  public void subscribeUserTopicNodeNotAllowed() {
+    SecurityPolicy policy = null;
+    ActorDetails actor = actor(policy, ActorType.Node, 2L, 3L);
+    TopicSettings request = requestForTopics("user/1/events");
+    service.setUserTopicPrefix(true);
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic not allowed and keeps user prefix",
+        result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("user/1/events"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)));
+    // @formatter:on
+  }
+
+  @Test
+  public void subscribeUserTopicReadNodeDataNotAllowed() {
+    SecurityPolicy policy = null;
+    ActorDetails actor = actor(policy, ActorType.ReadNodeDataToken, 2L, 3L);
+    TopicSettings request = requestForTopics("user/1/events");
+    service.setUserTopicPrefix(true);
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic not allowed and keeps user prefix",
+        result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("user/1/events"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)));
+    // @formatter:on
+  }
+
+  @Test
+  public void subscribeUserTopicNoPrefixAllowed() {
+    SecurityPolicy policy = null;
+    ActorDetails actor = actor(policy, ActorType.UserToken, 2L, 3L);
+    TopicSettings request = requestForTopics("events");
+    service.setUserTopicPrefix(true);
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic allowed and keeps user prefix",
+        result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("user/1/events"))
+            .withProperty("qos", equalTo(Qos.AtLeastOnce)));
+    // @formatter:on
+  }
+
+  @Test
+  public void subscribeUserTopicNoPrefixNodeNotAllowed() {
+    SecurityPolicy policy = null;
+    ActorDetails actor = actor(policy, ActorType.Node, 2L, 3L);
+    TopicSettings request = requestForTopics("events");
+    service.setUserTopicPrefix(true);
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic not allowed and omits user prefix",
+        result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("events"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)));
+    // @formatter:on
+  }
+
+  @Test
+  public void subscribeUserTopicNoPrefixReadNodeDataNotAllowed() {
+    SecurityPolicy policy = null;
+    ActorDetails actor = actor(policy, ActorType.ReadNodeDataToken, 2L, 3L);
+    TopicSettings request = requestForTopics("events");
+    service.setUserTopicPrefix(true);
+    TopicSettings result = service.evaluateSubscribe(actor, request);
+    assertThat("Result provided", result, notNullValue());
+    assertThat("Topic provided", result.getSettings(), allOf(notNullValue(), hasSize(1)));
+    // @formatter:off
+    assertThat("Topic not allowed and omits user prefix",
+        result.getSettings().get(0),
+        pojo(TopicSubscriptionSetting.class)
+            .withProperty("topic", equalTo("events"))
+            .withProperty("qos", equalTo(Qos.NotAllowed)));
     // @formatter:on
   }
 

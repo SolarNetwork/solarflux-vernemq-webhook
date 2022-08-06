@@ -88,12 +88,13 @@ public final class DbUtils {
    */
   public static void createToken(JdbcOperations jdbcOps, String tokenId, String tokenSecret,
       Long userId, boolean active, String type, SecurityPolicy policy) {
+    // CHECKSTYLE OFF: LineLength
     jdbcOps.update(
-        // CHECKSTYLE IGNORE LineLength FOR NEXT 2 LINES
         "INSERT INTO solaruser.user_auth_token(auth_token,auth_secret,user_id,status,token_type,jpolicy)"
             + " VALUES (?,?,?,?::solaruser.user_auth_token_status,?::solaruser.user_auth_token_type,?::jsonb)",
         tokenId, tokenSecret, userId, active ? "Active" : "Disabled", type,
         JsonUtils.getJSONString(policy, null));
+    // CHECKSTYLE ON: LineLength
   }
 
   /**

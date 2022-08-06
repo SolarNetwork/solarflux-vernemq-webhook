@@ -32,6 +32,7 @@ import net.solarnetwork.central.security.SecurityPolicy;
 import net.solarnetwork.central.support.JsonUtils;
 import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
 import net.solarnetwork.flux.vernemq.webhook.domain.ActorDetails;
+import net.solarnetwork.flux.vernemq.webhook.domain.ActorType;
 
 /**
  * {@link RowMapper} for {@link ActorDetails}.
@@ -116,7 +117,8 @@ public class ActorDetailsRowMapper implements RowMapper<Actor> {
       policy = JsonUtils.getObjectFromJSON(policyJson, BasicSecurityPolicy.class);
     }
 
-    boolean publishAllowed = "Node".equals(tokenType);
+    ActorType actorType = ActorType.forValue(tokenType);
+    boolean publishAllowed = (actorType == ActorType.Node);
 
     Set<Long> nodeIds = null;
     Array dbNodeIds = rs.getArray(nodeIdsCol);
@@ -138,7 +140,7 @@ public class ActorDetailsRowMapper implements RowMapper<Actor> {
       }
     }
 
-    return new ActorDetails(this.tokenId, publishAllowed, userId, policy, nodeIds);
+    return new ActorDetails(this.tokenId, actorType, publishAllowed, userId, policy, nodeIds);
   }
 
 }

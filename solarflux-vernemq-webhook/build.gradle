@@ -16,9 +16,9 @@ dependencyManagement {
 }
 
 repositories {
-    jcenter()
+    mavenCentral()
 	maven {
-		url "https://data.solarnetwork.net/archive/repository/solarnetwork-stage/"
+		url "https://dev.solarnetwork.net/archive/repository/solarnetwork-stage/"
 	}
 }
 
@@ -72,14 +72,19 @@ dependencies {
     implementation 'com.github.veqryn:cidr-ip-trie:1.0.1'
     
     // Testing
-    testImplementation "org.springframework.boot:spring-boot-starter-test"
+    testImplementation 'org.junit.jupiter:junit-jupiter'
 	testImplementation 'org.junit.jupiter:junit-jupiter-api'
 	testImplementation 'com.spotify:hamcrest-jackson:1.1.3'
     testImplementation 'com.spotify:hamcrest-pojo:1.1.3'
+    testImplementation "org.springframework.boot:spring-boot-starter-test"
 }
 
 sourceCompatibility = 1.8
 targetCompatibility = 1.8
+
+tasks.named('test') {
+    useJUnitPlatform()
+}
 
 eclipse {
 	project {

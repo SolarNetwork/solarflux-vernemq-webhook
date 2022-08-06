@@ -106,7 +106,8 @@ public class SnTokenDetailsRowMapperTests extends TestSupport {
             .withProperty("nodeIds", contains(1L, 2L, 3L))
             .withProperty("sourceIds", contains("one", "two", "three"))
             .withProperty("minAggregation", equalTo(Aggregation.Month))
-            .withProperty("notAfter", equalTo(new DateTime(1544388330000L).withZone(DateTimeZone.UTC)))
+            .withProperty("notAfter", equalTo(
+                new DateTime(1544388330000L).withZone(DateTimeZone.UTC)))
     );
     // @formatter:on
   }

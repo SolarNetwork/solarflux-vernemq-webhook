@@ -37,6 +37,13 @@ public interface Actor {
   String getTokenId();
 
   /**
+   * The actor type.
+   * 
+   * @return the actor type, or {@literal null} if not known
+   */
+  ActorType getActorType();
+
+  /**
    * Flag if publishing is allowed for this actor.
    * 
    * @return {@literal true} if publishing is allowed
