@@ -2,7 +2,7 @@ plugins {
     id 'checkstyle'
     id 'java'
     id 'eclipse'
-	id 'org.springframework.boot' version '2.7.1'
+	id 'org.springframework.boot' version '2.7.12'
 }
 
 apply plugin: 'checkstyle'
@@ -79,8 +79,8 @@ dependencies {
     testImplementation "org.springframework.boot:spring-boot-starter-test"
 }
 
-sourceCompatibility = 1.8
-targetCompatibility = 1.8
+sourceCompatibility = 17
+targetCompatibility = 17
 
 tasks.named('test') {
     useJUnitPlatform()
