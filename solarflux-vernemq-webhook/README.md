@@ -1,5 +1,9 @@
 # SolarFlux VerneMQ Webhook App
 
+> :warning: This project is read-only now, as it has been integrated into the
+> [solarnetwork-central](https://github.com/SolarNetwork/solarnetwork-central/tree/develop/solarnet/solarflux-vernemq-webhook)
+> repository.
+
 This project provides a web server application that can respond to [VerneMQ][vernemq] webhook
 requests for authenticating and authorizing users. The VerneMQ server is assumed to be hosting MQTT
 topics related to SolarNode data, posted by the [SolarFlux Upload][solarflux-upload] SolarNode
