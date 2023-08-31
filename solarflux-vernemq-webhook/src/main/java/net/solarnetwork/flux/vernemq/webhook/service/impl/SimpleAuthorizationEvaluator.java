@@ -30,6 +30,7 @@ import org.springframework.util.PathMatcher;
 
 import net.solarnetwork.central.domain.Aggregation;
 import net.solarnetwork.flux.vernemq.webhook.domain.Actor;
+import net.solarnetwork.flux.vernemq.webhook.domain.ActorType;
 import net.solarnetwork.flux.vernemq.webhook.domain.Message;
 import net.solarnetwork.flux.vernemq.webhook.domain.Qos;
 import net.solarnetwork.flux.vernemq.webhook.domain.TopicSettings;
@@ -42,12 +43,15 @@ import net.solarnetwork.util.StringUtils;
  * Basic implementation of {@link AuthorizationEvaluator}.
  * 
  * <p>
- * This service works with topics adhering to the following syntax:
+ * This service works with topics adhering to the following syntaxes:
  * </p>
  * 
- * <pre>
- * <code>node/{nodeId}/datum/{aggregation}/{sourceId}</code>
- * </pre>
+ * <ul>
+ * <li><code>node/{nodeId}/datum/{aggregation}/{sourceId}</code></li>
+ * <li><code>user/{userId}/node/{nodeId}/datum/{aggregation}/{sourceId}</code></li>
+ * <li><code>{topic}</code> - with user token and {@code userTopicPrefix} enabled</li>
+ * <li><code>user/{userId}/{topic}</code> - with user token</li>
+ * </ul>
  * 
  * <p>
  * To support wildcard node IDs, {@link #setUserTopicPrefix(boolean)} must be set to
@@ -65,7 +69,7 @@ import net.solarnetwork.util.StringUtils;
  * </p>
  * 
  * @author matt
- * @version 1.1
+ * @version 1.2
  */
 public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
 
@@ -76,7 +80,15 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
   public static final String DEFAULT_NODE_DATUM_TOPIC_REGEX = "(?:user/(\\d+)/)?node/(\\d+|\\+)/datum/([^/]+)(/.+)";
   // CHECKSTYLE ON: LineLength
 
+  /**
+   * The default value for the {@code userTopicRegex} property.
+   */
+  // CHECKSTYLE OFF: LineLength
+  public static final String DEFAULT_USER_TOPIC_REGEX = "(?:user/(\\d+)/)?(.+)";
+  // CHECKSTYLE ON: LineLength
+
   private Pattern nodeDatumTopicRegex = Pattern.compile(DEFAULT_NODE_DATUM_TOPIC_REGEX);
+  private Pattern userTopicRegex = Pattern.compile(DEFAULT_USER_TOPIC_REGEX);
   private boolean userTopicPrefix = false;
   private Qos maxQos = null;
 
@@ -151,14 +163,30 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
       }
       Matcher m = nodeDatumTopicRegex.matcher(topic);
       if (!m.matches()) {
-        AUDIT_LOG.info("Topic [{}] access denied to {}: invalid topic pattern", topic, actor);
-        qos = Qos.NotAllowed;
+        boolean userTopicMatch = false;
+        if (actor.getActorType() == ActorType.UserToken) {
+          Matcher um = userTopicRegex.matcher(topic);
+          if (um.matches()) {
+            userTopicMatch = true;
+            String topicUserId = um.group(1);
+            if (!topicUserAllowed(actor, topic, topicUserId)) {
+              qos = Qos.NotAllowed;
+            }
+            if (userTopicPrefix && (topicUserId == null || topicUserId.isEmpty())) {
+              topic = "user/" + actor.getUserId() + "/" + topic;
+            }
+          }
+        }
+        if (!userTopicMatch) {
+          AUDIT_LOG.info("Topic [{}] access denied to {}: invalid topic pattern", topic, actor);
+          qos = Qos.NotAllowed;
+        }
       } else {
         String topicUserId = m.group(1);
         String topicNode = m.group(2);
         String topicAgg = m.group(3);
         String topicSource = m.group(4);
-        if (!(topicUserAllowed(actor, topicSource, topicUserId)
+        if (!(topicUserAllowed(actor, topic, topicUserId)
             && topicNodeAllowed(actor, topic, topicNode)
             && topicSourceAllowed(actor, topic, topicSource)
             && topicAggregationAllowed(actor, topic, topicAgg))) {
@@ -321,7 +349,7 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
   /**
    * Get the node datum topic regular expression.
    * 
-   * @return the regular expression
+   * @return the regular expression; defaults to {@link #DEFAULT_NODE_DATUM_TOPIC_REGEX}
    */
   public Pattern getNodeDatumTopicRegex() {
     return nodeDatumTopicRegex;
@@ -355,6 +383,30 @@ public class SimpleAuthorizationEvaluator implements AuthorizationEvaluator {
       throw new IllegalArgumentException("nodeDatumTopicRegex must not be null");
     }
     this.nodeDatumTopicRegex = nodeDatumTopicRegex;
+  }
+
+  /**
+   * Get the user topic regular expression.
+   * 
+   * @return the regular expression; defaults to {@link #DEFAULT_USER_TOPIC_REGEX}
+   */
+  public Pattern getUserTopicRegex() {
+    return userTopicRegex;
+  }
+
+  /**
+   * Set the user topic regular expression.
+   * 
+   * @param userTopicRegex
+   *        the regular expression to set
+   * @throws IllegalArgumentException
+   *         if {@code nodeDatumTopicRegex} is {@literal null}
+   */
+  public void setUserTopicRegex(Pattern userTopicRegex) {
+    if (userTopicRegex == null) {
+      throw new IllegalArgumentException("userTopicRegex must not be null");
+    }
+    this.userTopicRegex = userTopicRegex;
   }
 
   /**

@@ -19,9 +19,9 @@ package net.solarnetwork.flux.vernemq.webhook.service.impl.test;
 
 import static org.hamcrest.CoreMatchers.equalTo;
 import static org.hamcrest.CoreMatchers.nullValue;
-import static org.junit.Assert.assertThat;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.verify;
 
@@ -39,11 +39,11 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.sql.DataSource;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import net.solarnetwork.domain.DatumStreamId.NodeDatumStreamId;
 import net.solarnetwork.flux.vernemq.webhook.domain.v311.PublishRequest;
@@ -56,7 +56,7 @@ import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
  * @author matt
  * @version 1.0
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class JdbcAuditServiceTests extends TestSupport {
 
   private static final long FLUSH_DELAY = 300;
@@ -79,7 +79,7 @@ public class JdbcAuditServiceTests extends TestSupport {
   private Instant topOfHour;
   private JdbcAuditService auditor;
 
-  @Before
+  @BeforeEach
   public void setup() {
     now = Clock.fixed(Instant.now(), ZoneId.systemDefault());
     topOfHour = Instant.now(now).truncatedTo(ChronoUnit.HOURS);

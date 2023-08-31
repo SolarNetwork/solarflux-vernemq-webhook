@@ -1,5 +1,5 @@
 /* ========================================================================
- * Copyright 2018 SolarNetwork Foundation
+ * Copyright 2022 SolarNetwork Foundation
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,23 +15,43 @@
  * ========================================================================
  */
 
-package net.solarnetwork.flux.vernemq.webhook.web;
-
-import org.springframework.boot.builder.SpringApplicationBuilder;
-import org.springframework.boot.web.support.SpringBootServletInitializer;
-
-import net.solarnetwork.flux.vernemq.webhook.Server;
+package net.solarnetwork.flux.vernemq.webhook.domain;
 
 /**
- * {@code ServletInitializer} for container-based deployment.
+ * A security actor type enumeration.
  * 
  * @author matt
+ * @version 1.0
  */
-public class WebApplication extends SpringBootServletInitializer {
+public enum ActorType {
 
-  @Override
-  protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
-    return builder.sources(Server.class);
+  /** A node token. */
+  Node,
+
+  /** A read-node-data token. */
+  ReadNodeDataToken,
+
+  /** A user token. */
+  UserToken;
+
+  /**
+   * Get an enumeration value for a string value.
+   * 
+   * @param value
+   *        the string value
+   * @return the enumeration value, or {@literal null} if not known
+   */
+  public static ActorType forValue(String value) {
+    switch (value) {
+      case "Node":
+        return Node;
+      case "ReadNodeData":
+        return ReadNodeDataToken;
+      case "User":
+        return UserToken;
+      default:
+        return null;
+    }
   }
 
 }

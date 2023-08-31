@@ -17,21 +17,21 @@
 
 package net.solarnetwork.flux.vernemq.webhook.service.impl.test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
-import static org.junit.Assert.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.BDDMockito.given;
 import static org.mockito.BDDMockito.then;
-import static org.mockito.Matchers.any;
 
 import java.util.Arrays;
 import java.util.List;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.Mockito;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.jdbc.core.JdbcOperations;
 import org.springframework.jdbc.core.PreparedStatementCreator;
 
@@ -51,7 +51,7 @@ import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
  * @author matt
  * @version 1.0
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class JdbcAuthServiceDirectTokensTests extends TestSupport {
 
   @Mock
@@ -62,7 +62,7 @@ public class JdbcAuthServiceDirectTokensTests extends TestSupport {
 
   private JdbcAuthService authService;
 
-  @Before
+  @BeforeEach
   public void setup() {
     authService = new JdbcAuthService(jdbcOps, authorizationEvaluator);
     authService.setAllowDirectTokenAuthentication(true);

@@ -32,11 +32,12 @@ import net.solarnetwork.central.security.SecurityPolicy;
  * Details about an authenticated actor.
  * 
  * @author matt
- * @version 1.0
+ * @version 1.1
  */
 public class ActorDetails implements Actor {
 
   private final String tokenId;
+  private final ActorType actorType;
   private final boolean publishAllowed;
   private final Long userId;
   private final SecurityPolicy policy;
@@ -48,6 +49,8 @@ public class ActorDetails implements Actor {
    * 
    * @param tokenId
    *        the authenticated token ID
+   * @param actorType
+   *        the actor type
    * @param publishAllowed
    *        {@literal true} if publishing is allowed
    * @param userId
@@ -59,10 +62,11 @@ public class ActorDetails implements Actor {
    * @throws IllegalArgumentException
    *         if {@code userId} is {@literal null}
    */
-  public ActorDetails(String tokenId, boolean publishAllowed, Long userId, SecurityPolicy policy,
-      Set<Long> userNodeIds) {
+  public ActorDetails(String tokenId, ActorType actorType, boolean publishAllowed, Long userId,
+      SecurityPolicy policy, Set<Long> userNodeIds) {
     super();
     this.tokenId = tokenId;
+    this.actorType = actorType;
     this.publishAllowed = publishAllowed;
     if (userId == null) {
       throw new IllegalArgumentException("userId must not be null");
@@ -88,7 +92,7 @@ public class ActorDetails implements Actor {
    *        the node ID
    */
   public ActorDetails(Long userId, Long nodeId) {
-    this(null, true, userId, null, singleton(nodeId));
+    this(null, ActorType.Node, true, userId, null, singleton(nodeId));
   }
 
   private static Set<Long> resolveAllowedNodeIds(Set<Long> userNodeIds, SecurityPolicy policy) {
@@ -126,6 +130,11 @@ public class ActorDetails implements Actor {
   @Override
   public String getTokenId() {
     return tokenId;
+  }
+
+  @Override
+  public ActorType getActorType() {
+    return actorType;
   }
 
   @Override

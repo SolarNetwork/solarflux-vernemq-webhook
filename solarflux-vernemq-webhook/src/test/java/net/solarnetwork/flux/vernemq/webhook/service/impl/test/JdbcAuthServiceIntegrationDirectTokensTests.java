@@ -17,9 +17,9 @@
 
 package net.solarnetwork.flux.vernemq.webhook.service.impl.test;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -27,13 +27,12 @@ import java.io.UnsupportedEncodingException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase.Replace;
 import org.springframework.boot.test.autoconfigure.jdbc.JdbcTest;
-import org.springframework.test.context.junit4.SpringRunner;
+import org.springframework.test.context.junit.jupiter.SpringJUnitConfig;
 import org.springframework.util.FileCopyUtils;
 
 import net.solarnetwork.flux.vernemq.webhook.domain.Response;
@@ -48,7 +47,7 @@ import net.solarnetwork.io.RFC1924OutputStream;
  * @author matt
  * @version 1.0
  */
-@RunWith(SpringRunner.class)
+@SpringJUnitConfig
 @JdbcTest
 @AutoConfigureTestDatabase(replace = Replace.NONE)
 public class JdbcAuthServiceIntegrationDirectTokensTests extends JdbcAuthServiceIntegrationTests {
@@ -56,7 +55,7 @@ public class JdbcAuthServiceIntegrationDirectTokensTests extends JdbcAuthService
   private SecureRandom rng;
 
   @Override
-  @Before
+  @BeforeEach
   public void setup() {
     super.setup();
     authService.setAllowDirectTokenAuthentication(true);

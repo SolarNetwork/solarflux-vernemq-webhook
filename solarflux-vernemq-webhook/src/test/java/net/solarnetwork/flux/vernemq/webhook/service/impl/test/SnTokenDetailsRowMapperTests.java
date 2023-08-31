@@ -18,10 +18,10 @@
 package net.solarnetwork.flux.vernemq.webhook.service.impl.test;
 
 import static com.spotify.hamcrest.pojo.IsPojo.pojo;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.equalTo;
 import static org.hamcrest.Matchers.nullValue;
-import static org.junit.Assert.assertThat;
 import static org.mockito.BDDMockito.given;
 
 import java.sql.ResultSet;
@@ -29,10 +29,11 @@ import java.sql.SQLException;
 import java.util.UUID;
 
 import org.joda.time.DateTime;
-import org.junit.Test;
-import org.junit.runner.RunWith;
+import org.joda.time.DateTimeZone;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.runners.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import net.solarnetwork.central.domain.Aggregation;
 import net.solarnetwork.central.security.SecurityPolicy;
@@ -46,7 +47,7 @@ import net.solarnetwork.flux.vernemq.webhook.test.TestSupport;
  * @author matt
  * @version 1.0
  */
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class SnTokenDetailsRowMapperTests extends TestSupport {
 
   @Mock
@@ -105,7 +106,8 @@ public class SnTokenDetailsRowMapperTests extends TestSupport {
             .withProperty("nodeIds", contains(1L, 2L, 3L))
             .withProperty("sourceIds", contains("one", "two", "three"))
             .withProperty("minAggregation", equalTo(Aggregation.Month))
-            .withProperty("notAfter", equalTo(new DateTime(1544388330000L)))
+            .withProperty("notAfter", equalTo(
+                new DateTime(1544388330000L).withZone(DateTimeZone.UTC)))
     );
     // @formatter:on
   }

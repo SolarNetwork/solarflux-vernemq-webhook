@@ -44,7 +44,7 @@ debugMode: true
 
 ---
 spring:
-  profiles: development
+  config.activate.on-profile: development
   datasource:
     url: jdbc:postgresql://localhost:5412/solarnetwork
     username: solarauth
@@ -58,7 +58,7 @@ logging:
 
 ---
 spring:
-  profiles: production
+  config.activate.on-profile: production
 
 debugMode: false
 
